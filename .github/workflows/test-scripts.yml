@@ -1,0 +1,36 @@
+name: Test and Lint Scripts
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck Static Analysis
+        run: |
+          echo "=== Running ShellCheck ==="
+          # Find and check all shell scripts in the repo root
+          find . -name "*.sh" -not -path "./.git/*" | while read -r script; do
+            echo "Linting: $script"
+            shellcheck "$script"
+          done
+
+      - name: Run Bash Syntax Validation
+        run: |
+          echo "=== Running Bash Syntax Check (bash -n) ==="
+          find . -name "*.sh" -not -path "./.git/*" | while read -r script; do
+            echo "Checking syntax: $script"
+            bash -n "$script"
+          done
