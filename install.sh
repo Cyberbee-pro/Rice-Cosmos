@@ -33,6 +33,7 @@ detect_distro() {
 }
 
 DISTRO="${DISTRO:-$(detect_distro)}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOWNLOAD_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/cosmos/downloads"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/Cosmos"
 mkdir -p "$CONFIG_DIR"
@@ -87,8 +88,101 @@ if [ "$DISTRO" = "arch" ]; then
         exit 1
     fi
 else
+    # -------------------------------------------------------------------------
+    # NixOS Hardware Configuration & Declarative Module Generator
+    # -------------------------------------------------------------------------
+    TARGET_ETC_DIR="/etc/nixos"
+    REPO_HW_CONFIG="${SCRIPT_DIR}/nixos/hardware-configuration.nix"
+    TARGET_HW_CONFIG="${TARGET_ETC_DIR}/hardware-configuration.nix"
+
+    run_as_root() {
+        if [ "$EUID" -eq 0 ]; then
+            "$@"
+        elif [ "$1" != "nixos-generate-config" ] && [ -w "$TARGET_ETC_DIR" ]; then
+            "$@"
+        elif command -v sudo &>/dev/null; then
+            sudo "$@"
+        else
+            "$@"
+        fi
+    }
+
+    if [ ! -d "$TARGET_ETC_DIR" ]; then
+        echo -e "${YELLOW}[..] Directory ${TARGET_ETC_DIR} not found. Creating with elevated permissions...${NC}"
+        run_as_root mkdir -p "$TARGET_ETC_DIR"
+    fi
+
+    backup_hw_config() {
+        if [ -e "$TARGET_HW_CONFIG" ] || [ -L "$TARGET_HW_CONFIG" ]; then
+            local backup_path
+            backup_path="${TARGET_HW_CONFIG}.backup_$(date +%Y%m%d_%H%M%S)"
+            local count=1
+            while [ -e "$backup_path" ] || [ -L "$backup_path" ]; do
+                backup_path="${TARGET_HW_CONFIG}.backup_$(date +%Y%m%d_%H%M%S)_${count}"
+                count=$((count + 1))
+            done
+            echo -e "${YELLOW}[..] Creating backup of existing hardware configuration: ${backup_path}${NC}"
+            run_as_root cp -a "$TARGET_HW_CONFIG" "$backup_path"
+        fi
+    }
+
+    echo -e "\n${CYAN}=== NixOS Hardware Configuration ===${NC}"
+    echo -e "Do you want to use the repository's pre-configured hardware-configuration.nix (optimized for Lenovo LOQ), or auto-generate a fresh one for this machine?"
+    echo -e "  ${CYAN}[1]${NC} Use repo default"
+    echo -e "  ${CYAN}[2]${NC} Auto-generate fresh via nixos-generate-config"
+
+    hw_choice=""
+    if [ -t 0 ]; then
+        read -rp "Select option [1-2, default: 1]: " hw_choice || hw_choice="1"
+    elif read -r piped_input; then
+        hw_choice="$piped_input"
+    else
+        echo -e "${YELLOW}[!] Non-interactive terminal detected. Defaulting to Option [1].${NC}"
+        hw_choice="1"
+    fi
+
+    case "${hw_choice:-1}" in
+        2)
+            echo -e "${CYAN}[..] Auto-generating fresh hardware-configuration.nix via nixos-generate-config...${NC}"
+            if ! command -v nixos-generate-config &>/dev/null; then
+                echo -e "${RED}[ERR] nixos-generate-config not found in PATH. Falling back to repo default.${NC}"
+                backup_hw_config
+                if [ -f "$REPO_HW_CONFIG" ]; then
+                    run_as_root cp "$REPO_HW_CONFIG" "$TARGET_HW_CONFIG"
+                    echo -e "${GREEN}[OK] Repository hardware configuration deployed to ${TARGET_HW_CONFIG}.${NC}"
+                else
+                    echo -e "${RED}[ERR] Source configuration missing at ${REPO_HW_CONFIG}.${NC}"
+                fi
+            else
+                backup_hw_config
+                if run_as_root nixos-generate-config --dir "$TARGET_ETC_DIR"; then
+                    echo -e "${GREEN}[OK] Fresh hardware-configuration.nix generated successfully in ${TARGET_ETC_DIR}.${NC}"
+                else
+                    echo -e "${RED}[ERR] nixos-generate-config failed. Falling back to repo default.${NC}"
+                    if [ -f "$REPO_HW_CONFIG" ]; then
+                        run_as_root cp "$REPO_HW_CONFIG" "$TARGET_HW_CONFIG"
+                        echo -e "${GREEN}[OK] Repository hardware configuration deployed to ${TARGET_HW_CONFIG}.${NC}"
+                    fi
+                fi
+            fi
+            ;;
+        1|*)
+            if [ -n "$hw_choice" ] && [ "$hw_choice" != "1" ]; then
+                echo -e "${YELLOW}[!] Invalid input '${hw_choice}'. Defaulting to Option [1] (Use repo default).${NC}"
+            fi
+            echo -e "${CYAN}[..] Deploying repository pre-configured hardware-configuration.nix...${NC}"
+            if [ -f "$REPO_HW_CONFIG" ]; then
+                backup_hw_config
+                run_as_root cp "$REPO_HW_CONFIG" "$TARGET_HW_CONFIG"
+                echo -e "${GREEN}[OK] Repository hardware configuration deployed to ${TARGET_HW_CONFIG}.${NC}"
+            else
+                echo -e "${RED}[ERR] Source configuration missing at ${REPO_HW_CONFIG}.${NC}"
+            fi
+            ;;
+    esac
+
     # Declarative NixOS Generator
-    echo -e "${CYAN}[..] Generating Declarative NixOS Module for Themes . . . .${NC}"
+    echo -e "\n${CYAN}[..] Generating Declarative NixOS Module for Themes . . . .${NC}"
     cat << 'EOF' > "$CONFIG_DIR/nixos-theme-module.nix"
 # Cosmos Rice - Declarative Theme Configuration for NixOS
 { pkgs, ... }:
