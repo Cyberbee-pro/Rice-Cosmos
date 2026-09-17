@@ -54,6 +54,7 @@ install_package() {
                 echo -e "${RED}[ERR] 'nix' package manager not found.${NC}"
                 exit 1
             fi
+            echo -e "${YELLOW}[i] NixOS detected: installing imperatively via nix profile. (Declarative configuration in configuration.nix is recommended).${NC}"
             nix --extra-experimental-features 'nix-command flakes' profile install "nixpkgs#${nix_pkg}"
         else
             if ! command -v pacman &>/dev/null; then
@@ -61,9 +62,9 @@ install_package() {
                 exit 1
             fi
             if [ "$EUID" -eq 0 ]; then
-                pacman -S --needed --noconfirm "$arch_pkg"
+                pacman -Sy --needed --noconfirm "$arch_pkg"
             elif command -v sudo &>/dev/null; then
-                sudo pacman -S --needed --noconfirm "$arch_pkg"
+                sudo pacman -Sy --needed --noconfirm "$arch_pkg"
             else
                 echo -e "${RED}[ERR] Root privileges or sudo required to install ${arch_pkg}.${NC}"
                 exit 1
