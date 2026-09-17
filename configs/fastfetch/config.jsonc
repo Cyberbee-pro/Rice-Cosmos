@@ -1,0 +1,129 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "padding": {
+      "top": 1,
+      "left": 1,
+      "right": 2
+    }
+  },
+  "display": {
+    "separator": "    ",
+    "color": {
+      "separator": "38;2;108;112;134"
+    },
+    "size": {
+      "maxPrefix": "GB",
+      "ndigits": 1
+    }
+  },
+  "modules": [
+    {
+      "type": "title",
+      "format": "  {user-name-colored}  {host-name-colored}",
+      "color": {
+        "user": "magenta",
+        "at": "white",
+        "host": "blue"
+      }
+    },
+    {
+      "type": "separator",
+      "string": "─"
+    },
+    {
+      "type": "os",
+      "key": "󱄅 OS",
+      "keyColor": "magenta",
+      "format": "{3}"
+    },
+    {
+      "type": "host",
+      "key": "󰌢 Host",
+      "keyColor": "magenta",
+      "format": "{2}"
+    },
+    {
+      "type": "kernel",
+      "key": "󰌽 Kernel",
+      "keyColor": "magenta",
+      "format": "{1}"
+    },
+    {
+      "type": "uptime",
+      "key": "󰅐 Uptime",
+      "keyColor": "magenta"
+    },
+    {
+      "type": "packages",
+      "key": "󰏖 Packages",
+      "keyColor": "magenta",
+      "format": "{all}"
+    },
+    {
+      "type": "shell",
+      "key": "󰞷 Shell",
+      "keyColor": "magenta",
+      "format": "{1} {4}"
+    },
+    {
+      "type": "display",
+      "key": "󰍹 Display",
+      "keyColor": "magenta",
+      "format": "{1}x{2} @ {3}Hz"
+    },
+    {
+      "type": "wm",
+      "key": " WM",
+      "keyColor": "magenta"
+    },
+    {
+      "type": "cursor",
+      "key": "󰆿 Cursor",
+      "keyColor": "magenta",
+      "format": "{name}"
+    },
+    {
+      "type": "terminal",
+      "key": " Terminal",
+      "keyColor": "magenta",
+      "format": "{4}"
+    },
+    {
+      "type": "cpu",
+      "key": "󰍛 CPU",
+      "keyColor": "magenta",
+      "format": "{1}"
+    },
+    {
+      "type": "gpu",
+      "key": "󰢮 GPU",
+      "keyColor": "magenta",
+      "format": "RTX 3050 Laptop"
+    },
+    {
+      "type": "memory",
+      "key": "󰑭 Memory",
+      "keyColor": "magenta",
+      "format": "{1} / {2}"
+    },
+    {
+      "type": "disk",
+      "key": "󰋊 Disk",
+      "keyColor": "magenta",
+      "folders": "/:/storage",
+      "format": "{1} / {2} ({3})"
+    },
+    {
+      "type": "battery",
+      "key": "󰂄 Battery",
+      "keyColor": "magenta",
+      "format": "{4} [{5}]"
+    },
+    "break",
+    {
+      "type": "colors",
+      "symbol": "circle"
+    }
+  ]
+}

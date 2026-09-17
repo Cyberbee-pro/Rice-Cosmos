@@ -1,0 +1,88 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+[](#cba6f7)\
+$os\
+$username\
+[](bg:#b4befe fg:#cba6f7)\
+$directory\
+[](bg:#4B3F72 fg:#b4befe)\
+$git_branch\
+$git_status\
+[](fg:#4B3F72)\
+$fill\
+$cmd_duration\
+$status\
+[](#cba6f7)\
+$time\
+[](#cba6f7)\
+$line_break\
+$character
+"""
+
+# Dotted breadcrumbs connector in dimmed purple
+[fill]
+symbol = " · "
+style = "fg:#6c7086"
+
+[os]
+format = "[ $symbol ]($style)"
+style = "bg:#cba6f7 fg:#11111b"
+disabled = false
+
+[os.symbols]
+NixOS = " "
+Linux = " "
+
+[username]
+format = "[$user ]($style)"
+style_user = "bg:#cba6f7 fg:#11111b"
+style_root = "bg:#f38ba8 fg:#11111b"
+show_always = false
+
+[directory]
+format = "[ $path ]($style)"
+style = "bg:#b4befe fg:#11111b"
+truncation_length = 3
+truncation_symbol = "…/"
+home_symbol = " ~"
+
+[git_branch]
+symbol = " "
+style = "bg:#4B3F72 fg:#E0DEF4"
+format = '[ $symbol$branch ]($style)'
+
+[git_status]
+style = "bg:#4B3F72 fg:#EB6F92"
+format = '[($all_status$ahead_behind )]($style)'
+conflicted = "!"
+ahead = "⇡${count}"
+behind = "⇣${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+untracked = "?"
+stashed = "$"
+modified = "*"
+staged = "+"
+renamed = "»"
+deleted = "✘"
+
+[cmd_duration]
+format = "[$duration ](fg:#a6adc8)"
+min_time = 2_000
+
+[status]
+format = "[$symbol ]($style)"
+symbol = "✔"
+success_symbol = "[✔ ](bold #a6e3a1)"
+not_executable_symbol = "[✘ ](bold #f38ba8)"
+disabled = false
+
+[time]
+format = "[at $time  ]($style)"
+style = "bg:#cba6f7 fg:#11111b"
+time_format = "%I:%M:%S %p"
+disabled = false
+
+[character]
+success_symbol = "[└─>](bold #cba6f7) "
+error_symbol = "[└─>](bold #f38ba8) "
