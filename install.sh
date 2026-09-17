@@ -43,8 +43,7 @@ if command -v nix &> /dev/null; then
     if nix --extra-experimental-features 'nix-command flakes' run github:caelestia-dots/shell; then
         echo -e "${GREEN}[OK] Caelestia Shell executed successfully.${NC}"
     else
-        echo -e "${RED}[ERR] Caelestia Shell failed.${NC}"
-        exit 1
+        echo -e "${YELLOW}[!] Caelestia Shell execution failed or was skipped. Continuing...${NC}"
     fi
 else
     echo -e "${YELLOW}[!] Nix binary not found. Skipping Caelestia Shell.${NC}"
@@ -80,7 +79,7 @@ if [ "$DISTRO" = "arch" ]; then
         (
             cd "$DOWNLOAD_CACHE/qylock"
             chmod +x sddm.sh 2>/dev/null || true
-            $RUN_AS_ROOT ./sddm.sh
+            $RUN_AS_ROOT bash ./sddm.sh
         )
         echo -e "${GREEN}[OK] QYLock SDDM installed.${NC}"
     else

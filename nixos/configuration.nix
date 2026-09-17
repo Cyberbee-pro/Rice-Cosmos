@@ -72,6 +72,7 @@
         enable = true;
         efiSupport = true;
         devices = [ "nodev" ];
+        # Manual prerequisite: theme installed via install.sh (CyberGRUB-2077) or placed at /boot/grub/themes/CyberGRUB-2077
         theme = "/boot/grub/themes/CyberGRUB-2077";
       };
     };
@@ -215,9 +216,6 @@
     remotePlay.openFirewall = true;
     dedicatedServer.openFirewall = false;
     gamescopeSession.enable = true;
-    package = pkgs.steam.override {
-      extraArgs = "-cef-enable-debugging";
-    };
   };
 
   programs.gamemode.enable = true;

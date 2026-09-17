@@ -26,13 +26,15 @@ A modular, distribution-agnostic automated deployment suite for custom Linux des
 
 ```text
 ├── ascii_arts/            # Custom ASCII banners for Fastfetch
-├── kitty/                 # Kitty terminal dotfiles (kitty.conf, themes, prefs)
+├── configs/               # Dotfiles (kitty, fastfetch, starship)
+├── Wallpapers/            # Curated wallpapers & dynamic animated backgrounds
+├── nixos/                 # Declarative NixOS system configurations
 ├── download.sh            # Dependency & repository caching engine
 ├── install.sh             # System themes & shell installation script
 ├── SrodKitty.sh           # Kitty dotfile deployer & backup manager
 ├── setShell.sh            # Shell integration & dynamic ASCII configurator
+├── syncWallpapers.sh      # Structured wallpaper deployer
 └── main.sh                # Interactive master orchestrator
-
 ```
 
 ---
@@ -55,7 +57,7 @@ nix.settings.experimental-features = [ "nix-command" "flakes" ];
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Cyberbee-pro/Arch-Linux-Rice-A.git ~/CosmosRice
+git clone https://github.com/Cyberbee-pro/Rice-Cosmos.git ~/CosmosRice
 cd ~/CosmosRice
 
 ```
@@ -63,7 +65,7 @@ cd ~/CosmosRice
 ### 2. Grant Permissions
 
 ```bash
-chmod +x main.sh download.sh install.sh SrodKitty.sh setShell.sh
+chmod +x main.sh download.sh install.sh SrodKitty.sh setShell.sh syncWallpapers.sh
 
 ```
 
@@ -85,8 +87,8 @@ chmod +x main.sh download.sh install.sh SrodKitty.sh setShell.sh
   [4] Install Themes & Shell         (Caelestia, SDDM, GRUB)
   [5] Deploy Kitty Config            (Kitty terminal dotfile sync & backup)
   [6] Configure ASCII Art & Shell    (Fastfetch shell banner injection)
+  [7] Sync Wallpapers (Structured)   (Deploy hierarchy to ~/Pictures/Wallpapers)
   [0] Exit
-
 ```
 
 ---
@@ -104,4 +106,4 @@ exec $SHELL
 
 ## License
 
-This project is open-source and available under the [MIT License](https://www.google.com/search?q=LICENSE).
+This project is open-source and available under the [MIT License](LICENSE).

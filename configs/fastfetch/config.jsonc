@@ -111,7 +111,7 @@
       "type": "disk",
       "key": "󰋊 Disk",
       "keyColor": "magenta",
-      "folders": "/:/storage",
+      "folders": "/:/mnt/storage",
       "format": "{1} / {2} ({3})"
     },
     {

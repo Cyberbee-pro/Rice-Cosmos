@@ -141,7 +141,7 @@ render_cosmos_cli_animation() {
                     printf "\033[38;2;%d;%d;%dm%s" "$r" "$g" "$b" "$char"
                 fi
             done
-            printf "${C_RESET}\n"
+            printf "%b\n" "${C_RESET}"
         done
         sleep 0.03
         if (( step < 11 )); then
@@ -176,7 +176,7 @@ render_cosmos_cli_static() {
                 printf "\033[38;2;%d;%d;%dm%s" "$r" "$g" "$b" "$char"
             fi
         done
-        printf "${C_RESET}\n"
+        printf "%b\n" "${C_RESET}"
     done
 }
 
@@ -280,7 +280,7 @@ while true; do
     read -rp "  Enter choice [0-7]: " choice || choice="0"
 
     case "$choice" in
-        1) run_all; print_banner ;;
+        1) run_all ;;
         2) select_distro ;;
         3) print_banner; run_stage "download.sh" "Downloading Packages & Assets"; read -rp "  Press [Enter] to return..." || true; print_banner ;;
         4) print_banner; run_stage "install.sh" "Installing System Themes & Shell"; read -rp "  Press [Enter] to return..." || true; print_banner ;;

@@ -25,7 +25,11 @@ if [ ! -d "$SOURCE_DIR" ]; then
 fi
 
 if [ -L "$TARGET_DIR" ]; then
-    rm -f "$TARGET_DIR"
+    if [ -d "$TARGET_DIR" ]; then
+        echo -e "${YELLOW}[..] Preserving valid symlink: ${TARGET_DIR} -> $(readlink -f "$TARGET_DIR")${NC}"
+    else
+        rm -f "$TARGET_DIR"
+    fi
 fi
 
 mkdir -p "$TARGET_DIR"
