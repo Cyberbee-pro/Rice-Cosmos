@@ -8,8 +8,18 @@ dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
 pkill -f xdg-desktop-portal
 
 # Resolve dynamic Nix store paths
-HYPRLAND_PORTAL=$(ls -d /nix/store/*-xdg-desktop-portal-hyprland-*/libexec/xdg-desktop-portal-hyprland 2>/dev/null | tail -n 1)
-MAIN_PORTAL=$(ls -d /nix/store/*-xdg-desktop-portal-*/libexec/xdg-desktop-portal 2>/dev/null | grep -v hyprland | tail -n 1)
+HYPRLAND_PORTAL=""
+for p in /nix/store/*-xdg-desktop-portal-hyprland-*/libexec/xdg-desktop-portal-hyprland; do
+    [ -x "$p" ] && HYPRLAND_PORTAL="$p"
+done
+
+MAIN_PORTAL=""
+for p in /nix/store/*-xdg-desktop-portal-*/libexec/xdg-desktop-portal; do
+    case "$p" in
+        *hyprland*) continue ;;
+    esac
+    [ -x "$p" ] && MAIN_PORTAL="$p"
+done
 
 # Launch detached background portal processes
 if [ -n "$HYPRLAND_PORTAL" ] && [ -n "$MAIN_PORTAL" ]; then
