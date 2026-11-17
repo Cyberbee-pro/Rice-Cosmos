@@ -110,15 +110,61 @@ if [ "$DISTRO" = "arch" ]; then
         echo -e "${RED}[ERR] 'pacman' package manager not found.${NC}"
         exit 1
     fi
+
+    ARCH_PKGS=(
+        hyprland sddm qt6-svg qt6-declarative qt5-graphicaleffects
+        qt5-quickcontrols2 qt5-svg grim slurp wl-clipboard satty
+        starship zsh neovim base-devel xdg-desktop-portal-hyprland
+        xdg-desktop-portal-gtk hyprpolkitagent pipewire pipewire-pulse
+        wireplumber libnotify ttf-jetbrains-mono-nerd networkmanager
+    )
+
     if [ "$EUID" -eq 0 ]; then
-        pacman -S --needed --noconfirm hyprland sddm qt6-svg qt6-declarative qt5-graphicaleffects qt5-quickcontrols2 qt5-svg grim slurp wl-clipboard satty starship zsh neovim
+        pacman -S --needed --noconfirm "${ARCH_PKGS[@]}"
     elif command -v sudo &>/dev/null; then
-        sudo pacman -S --needed --noconfirm hyprland sddm qt6-svg qt6-declarative qt5-graphicaleffects qt5-quickcontrols2 qt5-svg grim slurp wl-clipboard satty starship zsh neovim
+        sudo pacman -S --needed --noconfirm "${ARCH_PKGS[@]}"
     else
         echo -e "${RED}[ERR] Root privileges or sudo required to install packages.${NC}"
         exit 1
     fi
     echo -e "${GREEN}[OK] Core Arch desktop packages installed successfully.${NC}"
+
+    # Determine privilege wrapper for makepkg and AUR helper execution
+    if [ "$EUID" -eq 0 ]; then
+        if [ -z "${SUDO_USER:-}" ] || [ "${SUDO_USER}" = "root" ]; then
+            echo -e "${RED}[ERR] makepkg and AUR helpers cannot run as root, and no non-root SUDO_USER is available.${NC}"
+            exit 1
+        fi
+        run_as_user() { sudo -u "$SUDO_USER" "$@"; }
+    else
+        run_as_user() { "$@"; }
+    fi
+
+    # Detect existing AUR helper (paru or yay)
+    AUR_HELPER=""
+    if command -v paru &>/dev/null; then
+        AUR_HELPER="paru"
+    elif command -v yay &>/dev/null; then
+        AUR_HELPER="yay"
+    fi
+
+    if [ -z "$AUR_HELPER" ]; then
+        echo -e "${CYAN}[..] No AUR helper detected. Bootstrapping yay-bin . . . .${NC}"
+        rm -rf /tmp/yay-bin
+        run_as_user git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
+        (
+            cd /tmp/yay-bin
+            run_as_user makepkg -si --noconfirm
+        )
+        AUR_HELPER="yay"
+        echo -e "${GREEN}[OK] yay-bin bootstrapped successfully.${NC}"
+    else
+        echo -e "${GREEN}[OK] Detected existing AUR helper: ${AUR_HELPER}.${NC}"
+    fi
+
+    echo -e "${CYAN}[..] Installing Caelestia Shell and CLI via ${AUR_HELPER} . . . .${NC}"
+    run_as_user "$AUR_HELPER" -S --needed --noconfirm caelestia-shell caelestia-cli
+    echo -e "${GREEN}[OK] Caelestia Shell and CLI installed successfully.${NC}"
 
     sync_repo "https://github.com/adnksharp/CyberGRUB-2077" "$DOWNLOAD_CACHE/CyberGRUB-2077" "CyberGRUB-2077"
     sync_repo "https://github.com/Darkkal44/qylock" "$DOWNLOAD_CACHE/qylock" "QYLock SDDM"
