@@ -62,9 +62,9 @@ install_package() {
                 exit 1
             fi
             if [ "$EUID" -eq 0 ]; then
-                pacman -Sy --needed --noconfirm "$arch_pkg"
+                pacman -S --needed --noconfirm "$arch_pkg"
             elif command -v sudo &>/dev/null; then
-                sudo pacman -Sy --needed --noconfirm "$arch_pkg"
+                sudo pacman -S --needed --noconfirm "$arch_pkg"
             else
                 echo -e "${RED}[ERR] Root privileges or sudo required to install ${arch_pkg}.${NC}"
                 exit 1

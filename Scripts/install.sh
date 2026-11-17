@@ -34,6 +34,14 @@ detect_distro() {
 
 DISTRO="${DISTRO:-$(detect_distro)}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -d "$SCRIPT_DIR/nixos" ]; then
+    REPO_ROOT="$SCRIPT_DIR"
+elif [ -d "$SCRIPT_DIR/../nixos" ]; then
+    REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+    REPO_ROOT="$SCRIPT_DIR"
+fi
+
 DOWNLOAD_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/cosmos/downloads"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/Cosmos"
 mkdir -p "$CONFIG_DIR"
@@ -50,7 +58,7 @@ else
     echo -e "${YELLOW}[!] Nix binary not found. Skipping Caelestia Shell.${NC}"
 fi
 
-# 2. Distro-Gated System Theme Installation
+# 2. Distro-Gated System Theme & Flake Installation
 if [ "$DISTRO" = "arch" ]; then
     RUN_AS_ROOT="sudo"
     if [ "$EUID" -eq 0 ]; then
@@ -89,16 +97,13 @@ if [ "$DISTRO" = "arch" ]; then
     fi
 else
     # -------------------------------------------------------------------------
-    # NixOS Hardware Configuration & Declarative Module Generator
+    # NixOS Flake & Configuration Deployment
     # -------------------------------------------------------------------------
     TARGET_ETC_DIR="/etc/nixos"
-    REPO_HW_CONFIG="${SCRIPT_DIR}/nixos/hardware-configuration.nix"
-    TARGET_HW_CONFIG="${TARGET_ETC_DIR}/hardware-configuration.nix"
+    NIXOS_SRC="${REPO_ROOT}/nixos"
 
     run_as_root() {
         if [ "$EUID" -eq 0 ]; then
-            "$@"
-        elif [ "$1" != "nixos-generate-config" ] && [ -w "$TARGET_ETC_DIR" ]; then
             "$@"
         elif command -v sudo &>/dev/null; then
             sudo "$@"
@@ -107,100 +112,59 @@ else
         fi
     }
 
-    if [ ! -d "$TARGET_ETC_DIR" ]; then
-        echo -e "${YELLOW}[..] Directory ${TARGET_ETC_DIR} not found. Creating with elevated permissions...${NC}"
-        run_as_root mkdir -p "$TARGET_ETC_DIR"
+    if [ ! -d "$NIXOS_SRC" ]; then
+        echo -e "${RED}[ERR] Source NixOS configuration directory not found at: ${NIXOS_SRC}${NC}"
+        exit 1
     fi
 
-    backup_hw_config() {
-        if [ -e "$TARGET_HW_CONFIG" ] || [ -L "$TARGET_HW_CONFIG" ]; then
-            local backup_path
-            backup_path="${TARGET_HW_CONFIG}.backup_$(date +%Y%m%d_%H%M%S)"
-            local count=1
-            while [ -e "$backup_path" ] || [ -L "$backup_path" ]; do
-                backup_path="${TARGET_HW_CONFIG}.backup_$(date +%Y%m%d_%H%M%S)_${count}"
-                count=$((count + 1))
-            done
-            echo -e "${YELLOW}[..] Creating backup of existing hardware configuration: ${backup_path}${NC}"
-            run_as_root cp -a "$TARGET_HW_CONFIG" "$backup_path"
+    echo -e "\n${CYAN}=== NixOS Configuration & Flake Deployment ===${NC}"
+
+    # 1. Back up existing /etc/nixos to /etc/nixos.backup_YYYYMMDD_HHMMSS
+    BACKUP_ETC=""
+    if [ -e "$TARGET_ETC_DIR" ] || [ -L "$TARGET_ETC_DIR" ]; then
+        BACKUP_ETC="${TARGET_ETC_DIR}.backup_$(date +%Y%m%d_%H%M%S)"
+        count=1
+        while [ -e "$BACKUP_ETC" ] || [ -L "$BACKUP_ETC" ]; do
+            BACKUP_ETC="${TARGET_ETC_DIR}.backup_$(date +%Y%m%d_%H%M%S)_${count}"
+            count=$((count + 1))
+        done
+        echo -e "${YELLOW}[..] Backing up existing ${TARGET_ETC_DIR} to ${BACKUP_ETC}...${NC}"
+        run_as_root cp -a "$TARGET_ETC_DIR" "$BACKUP_ETC"
+        echo -e "${GREEN}[OK] Backup created at ${BACKUP_ETC}.${NC}"
+    fi
+
+    run_as_root mkdir -p "$TARGET_ETC_DIR"
+
+    # 2. Deploy ./nixos/ items (configuration.nix, flake.nix, flake.lock, cachix.nix, cachix/, assets/)
+    echo -e "${CYAN}[..] Deploying NixOS configuration files to ${TARGET_ETC_DIR}...${NC}"
+    for item in configuration.nix flake.nix flake.lock cachix.nix cachix assets .gitignore; do
+        if [ -e "$NIXOS_SRC/$item" ]; then
+            run_as_root cp -rL --remove-destination "$NIXOS_SRC/$item" "$TARGET_ETC_DIR/"
+            echo -e "${GREEN}[OK] Deployed ${item} to ${TARGET_ETC_DIR}/${item}.${NC}"
+        else
+            echo -e "${YELLOW}[!] Optional item ${item} not found in ${NIXOS_SRC}, skipping.${NC}"
         fi
-    }
+    done
 
-    echo -e "\n${CYAN}=== NixOS Hardware Configuration ===${NC}"
-    echo -e "Do you want to use the repository's pre-configured hardware-configuration.nix (optimized for Lenovo LOQ), or auto-generate a fresh one for this machine?"
-    echo -e "  ${CYAN}[1]${NC} Use repo default"
-    echo -e "  ${CYAN}[2]${NC} Auto-generate fresh via nixos-generate-config"
-
-    hw_choice=""
-    if [ -t 0 ]; then
-        read -rp "Select option [1-2, default: 1]: " hw_choice || hw_choice="1"
-    elif read -r piped_input; then
-        hw_choice="$piped_input"
+    # 3. Preserve the target machine's existing hardware-configuration.nix from backup
+    if [ -n "$BACKUP_ETC" ] && [ -f "$BACKUP_ETC/hardware-configuration.nix" ]; then
+        echo -e "${CYAN}[..] Preserving target machine's hardware-configuration.nix from backup...${NC}"
+        run_as_root cp -a "$BACKUP_ETC/hardware-configuration.nix" "$TARGET_ETC_DIR/hardware-configuration.nix"
+        echo -e "${GREEN}[OK] Restored machine hardware-configuration.nix (mounts & UUIDs preserved).${NC}"
+    elif [ ! -f "$TARGET_ETC_DIR/hardware-configuration.nix" ]; then
+        if [ -f "$NIXOS_SRC/hardware-configuration.nix" ]; then
+            echo -e "${YELLOW}[..] Deploying repository default hardware-configuration.nix...${NC}"
+            run_as_root cp -a "$NIXOS_SRC/hardware-configuration.nix" "$TARGET_ETC_DIR/hardware-configuration.nix"
+            echo -e "${GREEN}[OK] Default hardware-configuration.nix deployed.${NC}"
+        elif command -v nixos-generate-config &>/dev/null; then
+            echo -e "${CYAN}[..] Generating fresh hardware-configuration.nix via nixos-generate-config...${NC}"
+            run_as_root nixos-generate-config --dir "$TARGET_ETC_DIR"
+            echo -e "${GREEN}[OK] Generated fresh hardware-configuration.nix.${NC}"
+        fi
     else
-        echo -e "${YELLOW}[!] Non-interactive terminal detected. Defaulting to Option [1].${NC}"
-        hw_choice="1"
+        echo -e "${GREEN}[OK] hardware-configuration.nix already present in ${TARGET_ETC_DIR}.${NC}"
     fi
 
-    case "${hw_choice:-1}" in
-        2)
-            echo -e "${CYAN}[..] Auto-generating fresh hardware-configuration.nix via nixos-generate-config...${NC}"
-            if ! command -v nixos-generate-config &>/dev/null; then
-                echo -e "${RED}[ERR] nixos-generate-config not found in PATH. Falling back to repo default.${NC}"
-                backup_hw_config
-                if [ -f "$REPO_HW_CONFIG" ]; then
-                    run_as_root cp "$REPO_HW_CONFIG" "$TARGET_HW_CONFIG"
-                    echo -e "${GREEN}[OK] Repository hardware configuration deployed to ${TARGET_HW_CONFIG}.${NC}"
-                else
-                    echo -e "${RED}[ERR] Source configuration missing at ${REPO_HW_CONFIG}.${NC}"
-                fi
-            else
-                backup_hw_config
-                if run_as_root nixos-generate-config --dir "$TARGET_ETC_DIR"; then
-                    echo -e "${GREEN}[OK] Fresh hardware-configuration.nix generated successfully in ${TARGET_ETC_DIR}.${NC}"
-                else
-                    echo -e "${RED}[ERR] nixos-generate-config failed. Falling back to repo default.${NC}"
-                    if [ -f "$REPO_HW_CONFIG" ]; then
-                        run_as_root cp "$REPO_HW_CONFIG" "$TARGET_HW_CONFIG"
-                        echo -e "${GREEN}[OK] Repository hardware configuration deployed to ${TARGET_HW_CONFIG}.${NC}"
-                    fi
-                fi
-            fi
-            ;;
-        1|*)
-            if [ -n "$hw_choice" ] && [ "$hw_choice" != "1" ]; then
-                echo -e "${YELLOW}[!] Invalid input '${hw_choice}'. Defaulting to Option [1] (Use repo default).${NC}"
-            fi
-            echo -e "${CYAN}[..] Deploying repository pre-configured hardware-configuration.nix...${NC}"
-            if [ -f "$REPO_HW_CONFIG" ]; then
-                backup_hw_config
-                run_as_root cp "$REPO_HW_CONFIG" "$TARGET_HW_CONFIG"
-                echo -e "${GREEN}[OK] Repository hardware configuration deployed to ${TARGET_HW_CONFIG}.${NC}"
-            else
-                echo -e "${RED}[ERR] Source configuration missing at ${REPO_HW_CONFIG}.${NC}"
-            fi
-            ;;
-    esac
-
-    # Declarative NixOS Generator
-    echo -e "\n${CYAN}[..] Generating Declarative NixOS Module for Themes . . . .${NC}"
-    cat << 'EOF' > "$CONFIG_DIR/nixos-theme-module.nix"
-# Cosmos Rice - Declarative Theme Configuration for NixOS
-{ pkgs, ... }:
-
-{
-  # 1. SDDM Configuration
-  services.displayManager.sddm = {
-    enable = true;
-    theme = "qylock";
-  };
-
-  # 2. GRUB Configuration
-  boot.loader.grub = {
-    enable = true;
-    # Custom GRUB theme packages can be referenced here
-  };
-}
-EOF
-    echo -e "${GREEN}[OK] Declarative NixOS module generated at: ${CONFIG_DIR}/nixos-theme-module.nix${NC}"
-    echo -e "${YELLOW}-> Import this file in your /etc/nixos/configuration.nix to apply system themes.${NC}"
+    echo -e "${GREEN}[OK] NixOS flake and configuration deployment complete.${NC}"
+    echo -e "${YELLOW}-> You can now rebuild your system with: sudo nixos-rebuild switch --flake /etc/nixos#cybees-nix${NC}"
 fi

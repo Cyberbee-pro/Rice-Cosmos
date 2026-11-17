@@ -31,9 +31,9 @@
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         "ros.cachix.org-1:dSyZx3Wmy2A34A3myy4BaCeDRhx8WfMq2GYLBy3LuNE="
       ];
-      access-tokens = [
-        "github.com=your token here"
-      ];
+      # To configure GitHub access tokens securely without committing credentials,
+      # provide a secret file and reference it via:
+      # nix.extraOptions = "!include /run/secrets/nix-access-tokens";
     };
     gc = {
       automatic = true;

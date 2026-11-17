@@ -29,8 +29,18 @@ fi
 
 # Step 2
 draw_progress "Staging configuration changes for Flake visibility"
-# Flakes cannot see untracked files. 'git add .' ensures any newly created modules are included.
-git add .
+# Flakes cannot see untracked files. Stage only explicit required Nix configuration paths.
+target_paths=()
+for path in flake.nix flake.lock configuration.nix hardware-configuration.nix cachix.nix cachix assets Scripts .gitignore; do
+    if [ -e "$path" ]; then
+        target_paths+=("$path")
+    fi
+done
+
+if [ ${#target_paths[@]} -gt 0 ]; then
+    git add -- "${target_paths[@]}"
+fi
+
 # Briefly show what files were modified/staged before the build output starts
 git status -s
 
@@ -38,10 +48,12 @@ git status -s
 draw_progress "Executing NixOS Rebuild (Switching to cybees-nix)"
 echo -e "\033[1;30m(This may take a few minutes depending on compilation...)\033[0m\n"
 
-# Execute the rebuild and catch whether it succeeds or fails
+# Execute the rebuild and capture the exact exit status
 if sudo nixos-rebuild switch --flake /etc/nixos#cybees-nix; then
+    REBUILD_EXIT=0
     BUILD_STATUS="\033[1;32mRebuild Successful! System updated.\033[0m"
 else
+    REBUILD_EXIT=$?
     BUILD_STATUS="\033[1;31mRebuild Failed! Check the Nix logs above for syntax errors.\033[0m"
 fi
 
@@ -56,3 +68,5 @@ echo -e "\n\033[1;34m========================================\033[0m"
 echo -e "$BUILD_STATUS"
 echo -e "\033[1;36mBuild Time: ${MINS}m ${SECS}s\033[0m"
 echo -e "\033[1;34m========================================\033[0m\n"
+
+exit "$REBUILD_EXIT"

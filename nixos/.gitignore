@@ -1,0 +1,7 @@
+# NixOS secrets and sensitive configuration files
+# Prevent unencrypted credentials from being indexed into world-readable /nix/store
+*.key
+*.secret
+.env
+.env.*
+secrets/
