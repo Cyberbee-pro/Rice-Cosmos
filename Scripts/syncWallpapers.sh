@@ -13,8 +13,14 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_DIR="${SCRIPT_DIR}/Wallpapers"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ -d "${SCRIPT_DIR}/Wallpapers" ]; then
+    SOURCE_DIR="${SCRIPT_DIR}/Wallpapers"
+elif [ -d "${SCRIPT_DIR}/../Wallpapers" ]; then
+    SOURCE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)/Wallpapers"
+else
+    SOURCE_DIR="${SCRIPT_DIR}/Wallpapers"
+fi
 TARGET_DIR="${HOME}/Pictures/Wallpapers"
 
 echo -e "${CYAN}[..] Deploying wallpapers with full folder structure to ${TARGET_DIR} . . . .${NC}"

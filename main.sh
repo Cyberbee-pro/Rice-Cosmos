@@ -10,7 +10,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Ensure companion scripts are executable
-chmod +x "$SCRIPT_DIR"/download.sh "$SCRIPT_DIR"/install.sh "$SCRIPT_DIR"/SrodKitty.sh "$SCRIPT_DIR"/setShell.sh "$SCRIPT_DIR"/syncWallpapers.sh 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/Scripts/download.sh" "$SCRIPT_DIR/Scripts/install.sh" "$SCRIPT_DIR/Scripts/SrodKitty.sh" "$SCRIPT_DIR/Scripts/setShell.sh" "$SCRIPT_DIR/Scripts/syncWallpapers.sh" 2>/dev/null || true
+for script in download.sh install.sh SrodKitty.sh setShell.sh syncWallpapers.sh; do
+    chmod +x "$SCRIPT_DIR/Scripts/$script" 2>/dev/null || true
+done
 
 # ANSI Palette (No Emojis)
 C_RESET='\033[0m'
@@ -226,8 +229,15 @@ run_stage() {
     echo -e "\n  ${C_BLUE}╭─[STAGE]${C_RESET} ${C_BOLD}${stage_title}${C_RESET}"
     echo -e "  ${C_BLUE}│${C_RESET} Target OS: ${C_YELLOW}${DISTRO^^}${C_RESET}"
 
-    if [ -f "$SCRIPT_DIR/$script_name" ]; then
-        if bash "$SCRIPT_DIR/$script_name"; then
+    local script_path=""
+    if [ -f "$SCRIPT_DIR/Scripts/$script_name" ]; then
+        script_path="$SCRIPT_DIR/Scripts/$script_name"
+    elif [ -f "$SCRIPT_DIR/$script_name" ]; then
+        script_path="$SCRIPT_DIR/$script_name"
+    fi
+
+    if [ -n "$script_path" ]; then
+        if bash "$script_path"; then
             echo -e "  ${C_BLUE}│${C_RESET}"
             echo -e "  ${C_GREEN}╰─[OK] ${stage_title} finished successfully.${C_RESET}\n"
         else
@@ -247,8 +257,8 @@ run_all() {
 
     run_stage "download.sh"        "1/5: Downloading Packages & Assets"
     run_stage "install.sh"         "2/5: Installing System Themes & Shell"
-    run_stage "SrodKitty.sh"       "3/5: Deploying Kitty Terminal Configuration"
-    run_stage "setShell.sh"        "4/5: Configuring Shell & Dynamic ASCII Art"
+    run_stage "SrodKitty.sh"       "3/5: Deploying Dotfiles (Hyprland, Caelestia, Neovim, Kitty, Fastfetch, Starship) & Helper Scripts"
+    run_stage "setShell.sh"        "4/5: Configuring Dynamic Fastfetch Banner & Script Aliases"
     run_stage "syncWallpapers.sh"  "5/5: Deploying Wallpapers (Structured)"
 
     echo -e "  ${C_DARK}─────────────────────────────────────────────────────────────────────────────${C_RESET}"
@@ -270,9 +280,9 @@ while true; do
     echo -e "  ${C_CYAN}[1]${C_RESET} Run Full Pipeline              ${C_DIM}(Execute all 5 stages sequentially)${C_RESET}"
     echo -e "  ${C_CYAN}[2]${C_RESET} Switch Target OS (${DISTRO^^})       ${C_DIM}(Toggle between Arch and NixOS)${C_RESET}"
     echo -e "  ${C_CYAN}[3]${C_RESET} Download Assets                ${C_DIM}(download.sh - Git, Kitty, Fastfetch, Themes)${C_RESET}"
-    echo -e "  ${C_CYAN}[4]${C_RESET} Install Themes & Shell         ${C_DIM}(install.sh - Caelestia, SDDM, GRUB)${C_RESET}"
-    echo -e "  ${C_CYAN}[5]${C_RESET} Deploy Kitty Terminal Config   ${C_DIM}(SrodKitty.sh - Dotfile Sync & Backups)${C_RESET}"
-    echo -e "  ${C_CYAN}[6]${C_RESET} Configure ASCII Art & Shell    ${C_DIM}(setShell.sh - Fastfetch Banner Injection)${C_RESET}"
+    echo -e "  ${C_CYAN}[4]${C_RESET} Install Themes & Shell         ${C_DIM}(install.sh - Caelestia, SDDM, GRUB, Flake)${C_RESET}"
+    echo -e "  ${C_CYAN}[5]${C_RESET} Deploy Dotfiles & Scripts      ${C_DIM}(SrodKitty.sh - Hyprland, Caelestia, Neovim, Kitty, Fastfetch, Starship, Bin)${C_RESET}"
+    echo -e "  ${C_CYAN}[6]${C_RESET} Configure Shell & Aliases      ${C_DIM}(setShell.sh - Fastfetch Banner & Script Aliases)${C_RESET}"
     echo -e "  ${C_CYAN}[7]${C_RESET} Sync Wallpapers (Structured)   ${C_DIM}(syncWallpapers.sh - Deploy hierarchy to ~/Pictures/Wallpapers)${C_RESET}"
     echo -e "  ${C_DARK}─────────────────────────────────────────────────────────────────────────────${C_RESET}"
     echo -e "  ${C_RED}[0]${C_RESET} Exit\n"
@@ -284,8 +294,8 @@ while true; do
         2) select_distro ;;
         3) print_banner; run_stage "download.sh" "Downloading Packages & Assets"; read -rp "  Press [Enter] to return..." || true; print_banner ;;
         4) print_banner; run_stage "install.sh" "Installing System Themes & Shell"; read -rp "  Press [Enter] to return..." || true; print_banner ;;
-        5) print_banner; run_stage "SrodKitty.sh" "Deploying Kitty Terminal Configuration"; read -rp "  Press [Enter] to return..." || true; print_banner ;;
-        6) print_banner; run_stage "setShell.sh" "Configuring Shell & Dynamic ASCII Art"; read -rp "  Press [Enter] to return..." || true; print_banner ;;
+        5) print_banner; run_stage "SrodKitty.sh" "Deploying Dotfiles (Hyprland, Caelestia, Neovim, Kitty, Fastfetch, Starship) & Helper Scripts"; read -rp "  Press [Enter] to return..." || true; print_banner ;;
+        6) print_banner; run_stage "setShell.sh" "Configuring Fastfetch Banner & Script Aliases"; read -rp "  Press [Enter] to return..." || true; print_banner ;;
         7) print_banner; run_stage "syncWallpapers.sh" "Deploying Wallpapers (Structured)"; read -rp "  Press [Enter] to return..." || true; print_banner ;;
         0) echo -e "\n  ${C_DIM}Exiting Cosmos Rice installer.${C_RESET}\n"; exit 0 ;;
         *) echo -e "\n  ${C_RED}[!] Invalid option selected.${C_RESET}"; sleep 1; print_banner ;;
