@@ -134,7 +134,7 @@ hl.config({
     decoration = {
         rounding         = 10,
         rounding_power   = 2,
-        active_opacity   = 0.7,
+        active_opacity   = 0.9,
         inactive_opacity = 0.65,
         dim_around       = 0.7,
         dim_inactive     = true,
@@ -303,12 +303,17 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mainMod .. " + mouse:272",  hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mainMod .. " + mouse:273",  hl.dsp.window.resize(), { mouse = true })
 
-
 -- --- Screenshots (Grim + Slurp + wl-clipboard) ---
-hl.bind("Print",                   hl.dsp.exec_cmd("GEOM=$(slurp) && grim -g \"$GEOM\" - | wl-copy --type image/png && notify-send -a 'Screenshot' 'Snippet Copied' 'Image copied to clipboard'"))
-hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd("GEOM=$(slurp) && grim -g \"$GEOM\" - | wl-copy --type image/png && notify-send -a 'Screenshot' 'Snippet Copied' 'Image copied to clipboard'"))
-hl.bind("SHIFT + Print",           hl.dsp.exec_cmd("mkdir -p ~/Pictures/Screenshots && FILE=~/Pictures/Screenshots/screenshot_$(date +%Y-%m-%d_%H-%M-%S).png && grim \"$FILE\" && wl-copy --type image/png < \"$FILE\" && notify-send -a 'Screenshot' 'Fullscreen Captured' 'Saved to ~/Pictures/Screenshots and copied to clipboard'"))
-hl.bind(mainMod .. " + Print",     hl.dsp.exec_cmd("mkdir -p ~/Pictures/Screenshots && FILE=~/Pictures/Screenshots/snip_$(date +%Y-%m-%d_%H-%M-%S).png && GEOM=$(slurp) && grim -g \"$GEOM\" \"$FILE\" && wl-copy --type image/png < \"$FILE\" && notify-send -a 'Screenshot' 'Snip Saved' 'Saved to ~/Pictures/Screenshots and copied to clipboard'"))
+-- hl.bind("Print",                   hl.dsp.exec_cmd("GEOM=$(slurp) && grim -g \"$GEOM\" - | wl-copy --type image/png && notify-send -a 'Screenshot' 'Snippet Copied' 'Image copied to clipboard'"))
+-- hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd("GEOM=$(slurp) && grim -g \"$GEOM\" - | wl-copy --type image/png && notify-send -a 'Screenshot' 'Snippet Copied' 'Image copied to clipboard'"))
+-- hl.bind("SHIFT + Print",           hl.dsp.exec_cmd("mkdir -p ~/Pictures/Screenshots && FILE=~/Pictures/Screenshots/screenshot_$(date +%Y-%m-%d_%H-%M-%S).png && grim \"$FILE\" && wl-copy --type image/png < \"$FILE\" && notify-send -a 'Screenshot' 'Fullscreen Captured' 'Saved to ~/Pictures/Screenshots and copied to clipboard'"))
+-- hl.bind(mainMod .. " + Print",     hl.dsp.exec_cmd("mkdir -p ~/Pictures/Screenshots && FILE=~/Pictures/Screenshots/snip_$(date +%Y-%m-%d_%H-%M-%S).png && GEOM=$(slurp) && grim -g \"$GEOM\" \"$FILE\" && wl-copy --type image/png < \"$FILE\" && notify-send -a 'Screenshot' 'Snip Saved' 'Saved to ~/Pictures/Screenshots and copied to clipboard'"))
+
+-- --- Screenshots (Satty Interactive HUD + Caelestia) ---
+hl.bind("Print",                   hl.dsp.exec_cmd("mkdir -p ~/Pictures/Screenshots && GEOM=$(slurp) && grim -g \"$GEOM\" - | satty --filename - --output-filename ~/Pictures/Screenshots/satty-%Y-%m-%d_%H-%M-%S.png --copy-command wl-copy --early-exit"))
+hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd("mkdir -p ~/Pictures/Screenshots && GEOM=$(slurp) && grim -g \"$GEOM\" - | satty --filename - --output-filename ~/Pictures/Screenshots/satty-%Y-%m-%d_%H-%M-%S.png --copy-command wl-copy --early-exit"))
+hl.bind(mainMod .. " + CTRL + SHIFT + S",  hl.dsp.exec_cmd("caelestia screenshot"))
+
 
 -- --- Hardware Controls (Audio, Brightness, Media) ---
 hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, ["repeat"] = true })
@@ -378,4 +383,13 @@ hl.window_rule({
     float  = true,
     center = true,
     size   = "680 520",
+})
+
+-- Satty Screenshot Editor Floating Center Window
+hl.window_rule({
+    name    = "satty-floating-center",
+    match   = { class = "^(com\\.gabm\\.satty|satty)$" },
+    float   = true,
+    center  = true,
+    opacity = "1.0 override 1.0 override",
 })
