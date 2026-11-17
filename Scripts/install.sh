@@ -33,7 +33,7 @@ detect_distro() {
 }
 
 DISTRO="${DISTRO:-$(detect_distro)}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -d "$SCRIPT_DIR/nixos" ]; then
     REPO_ROOT="$SCRIPT_DIR"
 elif [ -d "$SCRIPT_DIR/../nixos" ]; then
@@ -48,7 +48,9 @@ mkdir -p "$CONFIG_DIR"
 
 # 1. Caelestia Shell via Nix Flakes
 echo -e "${CYAN}[..] Running Caelestia Shell Setup . . . .${NC}"
-if command -v nix &> /dev/null; then
+if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DISPLAY:-}" ]; then
+    echo -e "${YELLOW}[!] No graphical display detected (WAYLAND_DISPLAY and DISPLAY unset). Skipping Caelestia Shell.${NC}"
+elif command -v nix &> /dev/null; then
     if nix --extra-experimental-features 'nix-command flakes' run github:caelestia-dots/shell; then
         echo -e "${GREEN}[OK] Caelestia Shell executed successfully.${NC}"
     else
@@ -91,6 +93,9 @@ if [ "$DISTRO" = "arch" ]; then
             $RUN_AS_ROOT bash ./sddm.sh
         )
         echo -e "${GREEN}[OK] QYLock SDDM installed.${NC}"
+        # shellcheck disable=SC2086
+        $RUN_AS_ROOT systemctl enable sddm.service
+        echo -e "${GREEN}[OK] SDDM service enabled on boot.${NC}"
     else
         echo -e "${RED}[ERR] QYLock source not found in cache. Run download.sh first.${NC}"
         exit 1

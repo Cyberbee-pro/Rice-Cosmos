@@ -105,6 +105,21 @@ sync_repo() {
 }
 
 if [ "$DISTRO" = "arch" ]; then
+    echo -e "${CYAN}[..] Installing core Arch desktop packages . . . .${NC}"
+    if ! command -v pacman &>/dev/null; then
+        echo -e "${RED}[ERR] 'pacman' package manager not found.${NC}"
+        exit 1
+    fi
+    if [ "$EUID" -eq 0 ]; then
+        pacman -S --needed --noconfirm hyprland sddm qt6-svg qt6-declarative qt5-graphicaleffects qt5-quickcontrols2 qt5-svg grim slurp wl-clipboard satty starship zsh neovim
+    elif command -v sudo &>/dev/null; then
+        sudo pacman -S --needed --noconfirm hyprland sddm qt6-svg qt6-declarative qt5-graphicaleffects qt5-quickcontrols2 qt5-svg grim slurp wl-clipboard satty starship zsh neovim
+    else
+        echo -e "${RED}[ERR] Root privileges or sudo required to install packages.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}[OK] Core Arch desktop packages installed successfully.${NC}"
+
     sync_repo "https://github.com/adnksharp/CyberGRUB-2077" "$DOWNLOAD_CACHE/CyberGRUB-2077" "CyberGRUB-2077"
     sync_repo "https://github.com/Darkkal44/qylock" "$DOWNLOAD_CACHE/qylock" "QYLock SDDM"
 else
