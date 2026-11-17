@@ -12,7 +12,7 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ -d "$SCRIPT_DIR/ascii_arts" ]; then
     REPO_ROOT="$SCRIPT_DIR"
 elif [ -d "$SCRIPT_DIR/../ascii_arts" ]; then
@@ -45,18 +45,27 @@ else
     echo -e "${YELLOW}[!] Local ascii_arts directory not found at ${ASCII_SRC}.${NC}"
 fi
 
-# 2. Deploy Utility Scripts from ./Scripts and ./nixos/Scripts
+# 2. Deploy User Utility Scripts from ./nixos/Scripts
 if [ -L "$COSMOS_SCRIPTS_DEST" ]; then
     rm -f "$COSMOS_SCRIPTS_DEST"
 fi
 mkdir -p "$COSMOS_SCRIPTS_DEST"
 
-if [ -d "${REPO_ROOT}/Scripts" ]; then
-    cp -rL "${REPO_ROOT}/Scripts"/* "$COSMOS_SCRIPTS_DEST"/ 2>/dev/null || true
-fi
+# Clean up any legacy or pipeline scripts if present in destination
+for legacy_file in download.sh install.sh SrodKitty.sh setShell.sh syncWallpapers.sh syncRepo.sh bin; do
+    rm -rf "${COSMOS_SCRIPTS_DEST:?}/${legacy_file:?}" 2>/dev/null || true
+done
 
 if [ -d "${REPO_ROOT}/nixos/Scripts" ]; then
-    cp -rL "${REPO_ROOT}/nixos/Scripts"/* "$COSMOS_SCRIPTS_DEST"/ 2>/dev/null || true
+    for script_src in "${REPO_ROOT}/nixos/Scripts"/*; do
+        [ -f "$script_src" ] || [ -L "$script_src" ] || continue
+        script_name="$(basename "$script_src")"
+        target_script="${COSMOS_SCRIPTS_DEST}/${script_name}"
+        if [ -L "$target_script" ]; then
+            rm -f "$target_script"
+        fi
+        cp -L --remove-destination "$script_src" "$target_script" 2>/dev/null || true
+    done
 fi
 
 chmod +x "$COSMOS_SCRIPTS_DEST"/* 2>/dev/null || true

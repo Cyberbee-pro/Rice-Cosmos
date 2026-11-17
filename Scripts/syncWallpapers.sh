@@ -13,7 +13,7 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ -d "${SCRIPT_DIR}/Wallpapers" ]; then
     SOURCE_DIR="${SCRIPT_DIR}/Wallpapers"
 elif [ -d "${SCRIPT_DIR}/../Wallpapers" ]; then

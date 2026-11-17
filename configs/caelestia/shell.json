@@ -1,0 +1,114 @@
+{
+    "appearance": {
+        "transparency": {
+            "enabled": true
+        }
+    },
+    "bar": {
+        "activeWindow": {
+            "compact": true,
+            "inverted": false,
+            "showOnHover": false
+        },
+        "popouts": {
+            "activeWindow": true
+        },
+        "showOnHover": true,
+        "tray": {
+            "background": true,
+            "compact": true,
+            "recolour": false
+        },
+        "workspaces": {
+            "activeTrail": true,
+            "occupiedBg": true,
+            "showWindowsOnSpecialWorkspaces": true,
+            "shown": 4
+        }
+    },
+    "dashboard": {
+        "performance": {
+            "showCpu": true,
+            "showGpu": true
+        },
+        "showWeather": false
+    },
+    "general": {
+        "apps": {
+            "audio": [
+                "/nix/store/09h3yc7b74r3vydcicf26civfspagnpa-vlc-3.0.23-2/bin/vlc",
+                "--started-from-file"
+            ],
+            "terminal": [
+                "kitty"
+            ]
+        }
+    },
+    "launcher": {
+        "showOnHover": true,
+        "useFuzzy": {
+            "apps": true
+        }
+    },
+    "services": {
+        "gpuType": "NVIDIA",
+        "maxVolume": 1.5,
+        "useFahrenheit": false,
+        "visualiserBars": 68
+    },
+    "utilities": {
+        "quickToggles": [
+            {
+                "enabled": true,
+                "id": "wifi"
+            },
+            {
+                "enabled": true,
+                "id": "bluetooth"
+            },
+            {
+                "enabled": true,
+                "id": "mic"
+            },
+            {
+                "enabled": true,
+                "id": "settings"
+            },
+            {
+                "enabled": true,
+                "id": "gameMode"
+            },
+            {
+                "enabled": true,
+                "id": "dnd"
+            },
+            {
+                "enabled": true,
+                "id": "vpn"
+            }
+        ],
+        "toasts": {
+            "fullscreen": "important",
+            "nowPlaying": true
+        },
+        "vpn": {
+            "provider": [
+                {
+                    "connectCmd": [
+                        "warp-cli",
+                        "connect"
+                    ],
+                    "disconnectCmd": [
+                        "warp-cli",
+                        "disconnect"
+                    ],
+                    "displayName": "Warp",
+                    "id": "vpn-mtfhctok-219u9",
+                    "interface": "warp-cli status",
+                    "name": "Cloudflare"
+                }
+            ],
+            "selectedProvider": "vpn-mtfhctok-219u9"
+        }
+    }
+}

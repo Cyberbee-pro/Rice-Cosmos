@@ -303,11 +303,12 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mainMod .. " + mouse:272",  hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mainMod .. " + mouse:273",  hl.dsp.window.resize(), { mouse = true })
 
+
 -- --- Screenshots (Grim + Slurp + wl-clipboard) ---
-hl.bind("Print",                   hl.dsp.exec_cmd("grim -g \"$(slurp)\" | wl-copy && notify-send -a 'Screenshot' 'Snippet Copied' 'Image copied to clipboard'"))
-hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" | wl-copy && notify-send -a 'Screenshot' 'Snippet Copied' 'Image copied to clipboard'"))
-hl.bind("SHIFT + Print",           hl.dsp.exec_cmd("mkdir -p ~/Pictures/Screenshots && FILE=~/Pictures/Screenshots/screenshot_$(date +%Y-%m-%d_%H-%M-%S).png && grim \"$FILE\" && wl-copy < \"$FILE\" && notify-send -a 'Screenshot' 'Fullscreen Captured' 'Saved to ~/Pictures/Screenshots and copied to clipboard'"))
-hl.bind(mainMod .. " + Print",     hl.dsp.exec_cmd("mkdir -p ~/Pictures/Screenshots && FILE=~/Pictures/Screenshots/snip_$(date +%Y-%m-%d_%H-%M-%S).png && grim -g \"$(slurp)\" \"$FILE\" && wl-copy < \"$FILE\" && notify-send -a 'Screenshot' 'Snip Saved' 'Saved to ~/Pictures/Screenshots and copied to clipboard'"))
+hl.bind("Print",                   hl.dsp.exec_cmd("GEOM=$(slurp) && grim -g \"$GEOM\" - | wl-copy --type image/png && notify-send -a 'Screenshot' 'Snippet Copied' 'Image copied to clipboard'"))
+hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd("GEOM=$(slurp) && grim -g \"$GEOM\" - | wl-copy --type image/png && notify-send -a 'Screenshot' 'Snippet Copied' 'Image copied to clipboard'"))
+hl.bind("SHIFT + Print",           hl.dsp.exec_cmd("mkdir -p ~/Pictures/Screenshots && FILE=~/Pictures/Screenshots/screenshot_$(date +%Y-%m-%d_%H-%M-%S).png && grim \"$FILE\" && wl-copy --type image/png < \"$FILE\" && notify-send -a 'Screenshot' 'Fullscreen Captured' 'Saved to ~/Pictures/Screenshots and copied to clipboard'"))
+hl.bind(mainMod .. " + Print",     hl.dsp.exec_cmd("mkdir -p ~/Pictures/Screenshots && FILE=~/Pictures/Screenshots/snip_$(date +%Y-%m-%d_%H-%M-%S).png && GEOM=$(slurp) && grim -g \"$GEOM\" \"$FILE\" && wl-copy --type image/png < \"$FILE\" && notify-send -a 'Screenshot' 'Snip Saved' 'Saved to ~/Pictures/Screenshots and copied to clipboard'"))
 
 -- --- Hardware Controls (Audio, Brightness, Media) ---
 hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, ["repeat"] = true })

@@ -9,12 +9,11 @@ set -euo pipefail
 # ANSI Palette
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
-RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Resolve Repository Root
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ -d "$SCRIPT_DIR/configs" ]; then
     REPO_ROOT="$SCRIPT_DIR"
 elif [ -d "$SCRIPT_DIR/../configs" ]; then
@@ -25,13 +24,16 @@ fi
 
 REPO_CONFIGS="${REPO_ROOT}/configs"
 SRC_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
+REPO_BIN="${REPO_ROOT}/Scripts/bin"
+SRC_BIN_DIR="${HOME}/.local/bin"
 
 echo -e "${CYAN}[..] Harvesting live configurations from ${SRC_CONFIG_DIR} into ${REPO_CONFIGS} . . . .${NC}"
 
 mkdir -p "$REPO_CONFIGS"
 
-# 1. Harvest Standard App Directories (hypr, kitty, fastfetch, starship)
-for app in hypr kitty fastfetch starship; do
+# 1. Harvest Standard App Directories
+APPS=("hypr" "kitty" "fastfetch" "starship" "caelestia" "nvim")
+for app in "${APPS[@]}"; do
     src_app_dir="${SRC_CONFIG_DIR}/${app}"
     dest_app_dir="${REPO_CONFIGS}/${app}"
 
@@ -68,5 +70,24 @@ if [ -f "${REPO_CONFIGS}/hypr/hyprland-gui.lua" ] || [ -L "${REPO_CONFIGS}/hypr/
     rm -f "${REPO_CONFIGS}/hypr/hyprland-gui.lua"
     echo -e "${GREEN}[OK] Purged legacy hyprland-gui.lua from ${REPO_CONFIGS}/hypr/.${NC}"
 fi
+
+# 4. Harvest Helper Scripts (~/.local/bin -> ./Scripts/bin)
+mkdir -p "$REPO_BIN"
+HELPER_SCRIPTS=("gamemode.sh" "toggle-hz.sh" "toggle-opacity.sh")
+for script in "${HELPER_SCRIPTS[@]}"; do
+    src_script="${SRC_BIN_DIR}/${script}"
+    dest_script="${REPO_BIN}/${script}"
+    if [ -f "$src_script" ] || [ -L "$src_script" ]; then
+        echo -e "${CYAN}[..] Harvesting helper script ${script} from ${src_script}...${NC}"
+        if cp -L --remove-destination "$src_script" "$dest_script"; then
+            chmod u+w "$dest_script" 2>/dev/null || true
+            echo -e "${GREEN}[OK] Harvested ${script} successfully.${NC}"
+        else
+            echo -e "${YELLOW}[!] Warning: Failed to harvest ${script}.${NC}"
+        fi
+    else
+        echo -e "${YELLOW}[!] Helper script not found at ${src_script}, skipping.${NC}"
+    fi
+done
 
 echo -e "${GREEN}[OK] Live repository configuration harvesting complete.${NC}"

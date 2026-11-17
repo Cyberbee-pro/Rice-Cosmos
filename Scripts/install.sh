@@ -33,7 +33,7 @@ detect_distro() {
 }
 
 DISTRO="${DISTRO:-$(detect_distro)}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ -d "$SCRIPT_DIR/nixos" ]; then
     REPO_ROOT="$SCRIPT_DIR"
 elif [ -d "$SCRIPT_DIR/../nixos" ]; then

@@ -10,8 +10,7 @@ A modular, distribution-agnostic automated deployment suite for custom Linux des
 
 * **Multi-Distribution Support**: Native package manager routing for Arch Linux (`pacman`) and NixOS / Nix (`nix profile`, flakes).
 * **Interactive CLI Suite**: An interactive shell menu with truecolor ANSI gradients and smooth terminal animations.
-* **Unified Hyprland & Dotfile Deployment**: Multi-app dotfile manager deploying unified Hyprland Lua, Kitty, Fastfetch, and Starship configurations with automated snapshot backups.
-* **Live Configuration Harvester**: Easily sync live desktop changes back into the repository via `syncRepo.sh`.
+* **Unified Desktop & Dotfile Deployment**: Multi-app configuration and helper script manager deploying Hyprland, Caelestia, Neovim, Kitty, Fastfetch, and Starship configurations with automated snapshot backups and helper scripts (`gamemode.sh`, `toggle-hz.sh`, `toggle-opacity.sh`) to `~/.local/bin/`.
 * **Dynamic Fastfetch & Script Aliases**: Injects dynamic ASCII art banner, Starship prompt initialization, and automatic alias generation for Cosmos scripts into `.bashrc` and `.zshrc`.
 * **System Theming & NixOS Deployment**:
   * **CyberGRUB-2077**: Automated setup of the Arasaka-styled GRUB bootloader theme.
@@ -25,10 +24,12 @@ A modular, distribution-agnostic automated deployment suite for custom Linux des
 
 ```text
 ├── ascii_arts/            # Custom ASCII banners for Fastfetch
-├── configs/               # Dotfiles (hypr, kitty, fastfetch, starship)
-│   ├── hypr/              # Unified hyprland.lua configuration
-│   ├── kitty/             # Kitty terminal configuration
+├── configs/               # Dotfiles (hypr, caelestia, nvim, kitty, fastfetch, starship)
+│   ├── caelestia/         # Caelestia shell configuration
 │   ├── fastfetch/         # Fastfetch configuration
+│   ├── hypr/              # Unified hyprland.lua configuration & scripts
+│   ├── kitty/             # Kitty terminal configuration
+│   ├── nvim/              # Neovim configuration (Lazy.nvim)
 │   └── starship/          # Starship prompt configuration
 ├── nixos/                 # Declarative NixOS system configurations & flakes
 │   ├── assets/            # System wallpapers & assets
@@ -38,11 +39,11 @@ A modular, distribution-agnostic automated deployment suite for custom Linux des
 │   ├── flake.nix          # NixOS Flake definition
 │   └── flake.lock         # Flake lockfile
 ├── Scripts/               # Companion deployment scripts
+│   ├── bin/               # Helper utilities deployed to ~/.local/bin (gamemode, toggle-hz, toggle-opacity)
 │   ├── download.sh        # Dependency & repository caching engine
 │   ├── install.sh         # System themes, flakes & NixOS configuration deployer
 │   ├── SrodKitty.sh       # Multi-app dotfile deployer & backup manager
 │   ├── setShell.sh        # Dynamic Fastfetch banner, Starship & script alias injector
-│   ├── syncRepo.sh        # Live system config harvester (System -> Repo)
 │   └── syncWallpapers.sh  # Structured wallpaper deployer
 ├── Wallpapers/            # Curated wallpapers & dynamic animated backgrounds
 └── main.sh                # Interactive master orchestrator
@@ -96,10 +97,9 @@ chmod +x main.sh Scripts/*.sh
   [2] Switch Target OS (ARCH / NIX)  (Toggle between Arch and NixOS)
   [3] Download Assets                (Git, Kitty, Fastfetch, Theme Repos)
   [4] Install Themes & Shell         (Caelestia, SDDM, GRUB, Flake)
-  [5] Deploy Dotfiles                (Hyprland, Kitty, Fastfetch, Starship)
+  [5] Deploy Dotfiles & Scripts      (Hyprland, Caelestia, Neovim, Kitty, Fastfetch, Starship, Bin)
   [6] Configure Shell & Aliases      (Fastfetch Banner & Script Aliases)
   [7] Sync Wallpapers (Structured)   (Deploy hierarchy to ~/Pictures/Wallpapers)
-  [8] Harvest Live Configs -> Repo   (Live System Configs -> configs/)
   [0] Exit
 ```
 

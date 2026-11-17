@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Multi-App Dotfile Deployer (Repo -> System)
+#  COSMOS RICE : Multi-App Dotfile & Bin Deployer (Repo -> System)
 # ==============================================================================
 
 set -euo pipefail
@@ -12,7 +12,7 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ -d "$SCRIPT_DIR/configs" ]; then
     REPO_ROOT="$SCRIPT_DIR"
 elif [ -d "$SCRIPT_DIR/../configs" ]; then
@@ -23,6 +23,8 @@ fi
 
 CONFIGS_DIR="${REPO_ROOT}/configs"
 TARGET_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
+BIN_SRC="${REPO_ROOT}/Scripts/bin"
+TARGET_BIN_DIR="${HOME}/.local/bin"
 
 echo -e "${CYAN}[..] Deploying Configurations to ${TARGET_CONFIG_DIR} . . . .${NC}"
 
@@ -31,7 +33,7 @@ if [ ! -d "$CONFIGS_DIR" ]; then
     exit 1
 fi
 
-# Iterate through every app directory in ./configs/ (e.g. hypr, kitty, fastfetch, starship)
+# 1. Iterate through every app directory in ./configs/ (caelestia, fastfetch, hypr, kitty, nvim, starship)
 for app_path in "$CONFIGS_DIR"/*; do
     [ -d "$app_path" ] || continue
     app="$(basename "$app_path")"
@@ -72,13 +74,18 @@ for app_path in "$CONFIGS_DIR"/*; do
     fi
 done
 
-# Remove any stale ~/.config/hypr/hyprland-gui.lua upon deployment so unified hyprland.lua runs cleanly
+# 2. Hyprland Specific Post-Deployment (scripts chmod +x and remove legacy hyprland-gui.lua)
+if [ -d "${TARGET_CONFIG_DIR}/hypr/scripts" ]; then
+    chmod +x "${TARGET_CONFIG_DIR}/hypr/scripts"/* 2>/dev/null || true
+    echo -e "${GREEN}[OK] Ensured executable permissions on ${TARGET_CONFIG_DIR}/hypr/scripts/.${NC}"
+fi
+
 if [ -f "${TARGET_CONFIG_DIR}/hypr/hyprland-gui.lua" ] || [ -L "${TARGET_CONFIG_DIR}/hypr/hyprland-gui.lua" ]; then
     rm -f "${TARGET_CONFIG_DIR}/hypr/hyprland-gui.lua"
     echo -e "${GREEN}[OK] Removed stale ${TARGET_CONFIG_DIR}/hypr/hyprland-gui.lua.${NC}"
 fi
 
-# Also copy ~/.config/starship/starship.toml to ~/.config/starship.toml so Starship loads it automatically
+# 3. Standalone Starship Config
 starship_src="${TARGET_CONFIG_DIR}/starship/starship.toml"
 starship_dest="${TARGET_CONFIG_DIR}/starship.toml"
 if [ -f "$starship_src" ]; then
@@ -91,4 +98,25 @@ if [ -f "$starship_src" ]; then
     else
         echo -e "${YELLOW}[!] Warning: Failed to copy starship.toml to ${starship_dest}.${NC}"
     fi
+fi
+
+# 4. Deploy Helper Scripts to ~/.local/bin/
+if [ -d "$BIN_SRC" ]; then
+    echo -e "${CYAN}[..] Deploying helper scripts to ${TARGET_BIN_DIR} . . . .${NC}"
+    mkdir -p "$TARGET_BIN_DIR"
+    for script_file in "$BIN_SRC"/*; do
+        [ -f "$script_file" ] || [ -L "$script_file" ] || continue
+        script_name="$(basename "$script_file")"
+        target_script="${TARGET_BIN_DIR}/${script_name}"
+        if [ -L "$target_script" ]; then
+            rm -f "$target_script"
+        fi
+        if cp -L --remove-destination "$script_file" "$target_script"; then
+            chmod +x "$target_script" 2>/dev/null || true
+            echo -e "${GREEN}[OK] Deployed helper script: ${script_name} -> ${target_script}${NC}"
+        else
+            echo -e "${YELLOW}[!] Warning: Failed to deploy ${script_name}.${NC}"
+        fi
+    done
+    chmod +x "$TARGET_BIN_DIR"/* 2>/dev/null || true
 fi
