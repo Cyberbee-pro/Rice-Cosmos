@@ -12,7 +12,7 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -d "$SCRIPT_DIR/configs" ]; then
     REPO_ROOT="$SCRIPT_DIR"
 elif [ -d "$SCRIPT_DIR/../configs" ]; then
@@ -53,7 +53,7 @@ for app_path in "$CONFIGS_DIR"/*; do
         if [ -L "$target_app_dir" ] && [ ! -e "$target_app_dir" ]; then
             cp -P "$target_app_dir" "$backup_path"
         else
-            cp -rL "$target_app_dir" "$backup_path"
+            cp -r "$target_app_dir" "$backup_path"
         fi
     fi
 
@@ -64,8 +64,8 @@ for app_path in "$CONFIGS_DIR"/*; do
 
     mkdir -p "$target_app_dir"
 
-    # Copy files cleanly
-    if cp -r --remove-destination "$app_path"/. "$target_app_dir"/; then
+    # Copy files cleanly in-place without unlinking the parent directory
+    if cp -rf "$app_path/." "$target_app_dir/"; then
         chmod -R u+w "$target_app_dir" 2>/dev/null || true
         echo -e "${GREEN}[OK] ${app} configurations deployed successfully to ${target_app_dir}.${NC}"
     else
@@ -75,6 +75,10 @@ for app_path in "$CONFIGS_DIR"/*; do
 done
 
 # 2. Hyprland Specific Post-Deployment (scripts chmod +x and remove legacy hyprland-gui.lua)
+if [ -d "${CONFIGS_DIR}/hypr/scripts" ]; then
+    chmod +x "${CONFIGS_DIR}/hypr/scripts"/* 2>/dev/null || true
+fi
+
 if [ -d "${TARGET_CONFIG_DIR}/hypr/scripts" ]; then
     chmod +x "${TARGET_CONFIG_DIR}/hypr/scripts"/* 2>/dev/null || true
     echo -e "${GREEN}[OK] Ensured executable permissions on ${TARGET_CONFIG_DIR}/hypr/scripts/.${NC}"
@@ -92,7 +96,7 @@ if [ -f "$starship_src" ]; then
     if [ -L "$starship_dest" ]; then
         rm -f "$starship_dest"
     fi
-    if cp --remove-destination "$starship_src" "$starship_dest"; then
+    if cp -f "$starship_src" "$starship_dest"; then
         chmod u+w "$starship_dest" 2>/dev/null || true
         echo -e "${GREEN}[OK] Starship configuration copied to ${starship_dest}.${NC}"
     else
