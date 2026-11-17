@@ -6,6 +6,7 @@
 {
   imports = [
     ./hardware-configuration.nix
+    ./cachix.nix
   ];
 
   # =========================================================================
@@ -19,6 +20,20 @@
       auto-optimise-store = true;
       connect-timeout = 5;
       download-buffer-size = 67108864; # 64MB buffer
+
+      # Trusted Users & ROS 2 Cachix Binary Cache
+      trusted-users = [ "root" "@wheel" ];
+      substituters = [
+        "https://cache.nixos.org"
+        "https://ros.cachix.org"
+      ];
+      trusted-public-keys = [
+        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+        "ros.cachix.org-1:dSyZx3Wmy2A34A3myy4BaCeDRhx8WfMq2GYLBy3LuNE="
+      ];
+      access-tokens = [
+        "github.com=your token here"
+      ];
     };
     gc = {
       automatic = true;
@@ -27,6 +42,7 @@
     };
   };
 
+  # Caelestia Shell & CLI Overlays
   nixpkgs.overlays = [
     (final: prev: {
       caelestia-cli = prev.caelestia-cli.overrideAttrs (oldAttrs: {
@@ -39,14 +55,20 @@
   ];
 
   # =========================================================================
-  # 2. BOOTLOADER, KERNEL & SYSTEM TUNING
+  # 2. BOOTLOADER, KERNEL & SYSTEM TUNING (ARCH-STYLE QUIET BOOT)
   # =========================================================================
   boot = {
-    kernelModules = [ "ideapad_laptop" ];
+    # Added xpad and uinput for Xbox controller rumble and user-space input mapping
+    kernelModules = [ "ideapad_laptop" "xpad" "uinput" ];
     consoleLogLevel = 0;
     initrd.verbose = false;
 
-    # Silent boot & NVIDIA Wayland stability flags
+    # Hardware quirks for external USB bridge stability
+    extraModprobeConfig = ''
+      options usb-storage quirks=14cd:6116:u
+    '';
+
+    # Arch-style silent kernel output & NVIDIA DRM parameters
     kernelParams = [
       "quiet"
       "splash"
@@ -54,9 +76,11 @@
       "rd.systemd.show_status=false"
       "rd.udev.log_level=3"
       "udev.log_priority=3"
+      "vt.global_cursor_default=0"
       "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
       "nvidia-drm.modeset=1"
       "nvidia-drm.fbdev=1"
+      "acpi_backlight=native"
     ];
 
     # Force IPv4 routing to bypass slow/broken IPv6 routes
@@ -72,8 +96,8 @@
         enable = true;
         efiSupport = true;
         devices = [ "nodev" ];
-        # Manual prerequisite: theme installed via install.sh (CyberGRUB-2077) or placed at /boot/grub/themes/CyberGRUB-2077
         theme = "/boot/grub/themes/CyberGRUB-2077";
+        configurationLimit = 10;
       };
     };
   };
@@ -83,7 +107,10 @@
   # =========================================================================
   networking = {
     hostName = "cybees-nix";
-    networkmanager.enable = true;
+    networkmanager = {
+      enable = true;
+      dns = "default";
+    };
     nameservers = [ "1.1.1.1" "8.8.8.8" ];
     firewall = {
       enable = true;
@@ -95,6 +122,9 @@
 
   time.timeZone = "Asia/Kolkata";
   i18n.defaultLocale = "en_US.UTF-8";
+  i18n.supportedLocales = [
+    "en_US.UTF-8/UTF-8"
+  ];
 
   # Background Network Daemons
   services.cloudflare-warp.enable = true;
@@ -103,27 +133,41 @@
   # =========================================================================
   # 4. HARDWARE, POWER & LAPTOP INTEGRATION
   # =========================================================================
-  # NVIDIA Dedicated GPU Setup
+  # Enable userland uinput access and Steam controller udev rules for force feedback
+  hardware.uinput.enable = true;
+  hardware.steam-hardware.enable = true;
+
+  # Hardware Graphics (Mesa / Vulkan Drivers)
   hardware.graphics = {
     enable = true;
-    enable32Bit = true; # Required for 32-bit Proton & Wine gaming
+    enable32Bit = true;
+    extraPackages = with pkgs; [
+      vulkan-loader
+      vulkan-validation-layers
+      vulkan-extension-layer
+    ];
   };
 
+  # Enable X11 server for SDDM display manager integration
   services.xserver = {
     enable = true;
     videoDrivers = [ "nvidia" ];
   };
 
+  # NVIDIA Dedicated GPU Setup (LOQ 15ARP9 - dGPU Only pinned to legacy 580)
   hardware.nvidia = {
     modesetting.enable = true;
-    powerManagement.enable = true;
+    nvidiaPersistenced = true;
+    powerManagement.enable = false;
     powerManagement.finegrained = false;
-    open = false; # Proprietary driver required for Wayland stability
+    open = false;
     nvidiaSettings = true;
+    
+    # Official NVIDIA driver package
     package = config.boot.kernelPackages.nvidiaPackages.stable;
   };
 
-  # Bluetooth
+  # Bluetooth Configuration
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
@@ -144,22 +188,26 @@
   services.upower.enable = true;
   services.power-profiles-daemon.enable = true;
 
-  # Lenovo LOQ Battery Conservation Mode (80% charge threshold)
+  # Lenovo LOQ Battery Conservation Mode (Set to 0 for 100% full charge)
   systemd.services.lenovo-battery-conservation = {
-    description = "Set Lenovo LOQ Battery Conservation Mode (80% Charge Limit)";
+    description = "Disable Lenovo LOQ Battery Conservation Mode (Full 100% Charge)";
     wantedBy = [ "multi-user.target" ];
     after = [ "systemd-modules-load.service" ];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = ''${pkgs.bash}/bin/bash -c "if [ -f /sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode ]; then echo 1 > /sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode; fi"'';
+      ExecStart = ''${pkgs.bash}/bin/bash -c "if [ -f /sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode ]; then echo 0 > /sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode; fi"'';
     };
   };
+
+  # Storage Integration
+  services.gvfs.enable = true;
+  services.udisks2.enable = true;
 
   # =========================================================================
   # 5. DESKTOP ENVIRONMENT, AUDIO & SECURITY
   # =========================================================================
-  # SDDM Display Manager (X11 backend avoids Wayland DRM launch lockups)
+  # SDDM Display Manager
   services.displayManager.sddm = {
     enable = true;
     wayland.enable = false;
@@ -190,6 +238,14 @@
     };
   };
 
+  # Override xdg-desktop-portal dependency checks to allow startup under SDDM
+  systemd.user.services.xdg-desktop-portal.unitConfig = {
+    Requisite = "";
+    PartOf = "";
+    BindsTo = "";
+    After = "";
+  };
+
   # Audio Subsystem
   services.pipewire = {
     enable = true;
@@ -208,27 +264,58 @@
     permissions = "u+rx,g+rx,o+rx";
   };
 
+  # PostgreSQL Database Server
+  services.postgresql = {
+    enable = true;
+    ensureDatabases = [ "devdb" ];
+    ensureUsers = [
+      {
+        name = "cyberbee";
+        ensureClauses.superuser = true;
+      }
+    ];
+  };
+
   # =========================================================================
   # 6. GAMING, COMPATIBILITY & VIRTUALIZATION
   # =========================================================================
+  services.flatpak.enable = true;
+
   programs.steam = {
     enable = true;
     remotePlay.openFirewall = true;
     dedicatedServer.openFirewall = false;
     gamescopeSession.enable = true;
+    package = pkgs.steam.override {
+      extraArgs = "-cef-enable-debugging";
+    };
   };
 
   programs.gamemode.enable = true;
 
-  # Binary compatibility (precompiled binaries & CLI tooling)
-  programs.nix-ld.enable = true;
+  # Binary compatibility
+  # Binary compatibility
+  programs.nix-ld = {
+    enable = true;
+    libraries = with pkgs; [
+      stdenv.cc.cc.lib # Provides libstdc++.so.6
+      zlib             # Common dependency for LSPs
+      openssl
+      curl
+      glib
+      util-linux
+    ];
+  };
   services.envfs.enable = true;
 
   # Containers
-  virtualisation.docker.enable = true;
+  virtualisation.docker = {
+    enable = true;
+    enableOnBoot = false;
+    autoPrune.enable = true;
+  };
   virtualisation.podman = {
     enable = true;
-    # dockerCompat = true;
   };
 
   # =========================================================================
@@ -246,7 +333,7 @@
   users.users.cyberbee = {
     isNormalUser = true;
     description = "Limited Probabilities Infinite Possibilities";
-    extraGroups = [ "wheel" "networkmanager" "video" "audio" "input" "docker" ];
+    extraGroups = [ "wheel" "networkmanager" "video" "audio" "input" "docker" "adbusers" ];
     initialPassword = "nixos";
     shell = pkgs.zsh;
   };
@@ -273,6 +360,7 @@
     tree
     jq
     pciutils
+    usbutils
     brightnessctl
     libnotify
     yazi
@@ -284,11 +372,19 @@
     playerctl
     bluez-tools
     gthumb
+    android-tools
+    lm_sensors
+    evtest # Useful CLI utility for verifying input & force feedback events
+
+    # MTP & Storage Tools
+    libmtp
+    android-file-transfer
 
     # GUI & Productivity Applications
     vscode
     firefox
     discord
+    obsidian
     cloudflare-warp
 
     # Multimedia, Graphics & Audio Production
@@ -299,6 +395,16 @@
     vlc
     ani-cli
     gpu-screen-recorder
+
+    # Graphics Backend, Diagnostic Tools & NVML Monitoring
+    vulkan-tools
+    mesa-demos
+    libglvnd
+    nvtopPackages.nvidia
+
+    # Direct NVIDIA utilities bin for Caelestia sysfs reader fallback
+    config.boot.kernelPackages.nvidiaPackages.legacy_580.bin
+    config.boot.kernelPackages.nvidiaPackages.legacy_580.settings
 
     # Wayland Desktop Shell, Screenshotting & Look/Feel
     wl-clipboard
@@ -335,6 +441,15 @@
     cmake
     gdb
     pkg-config
+    sqlite
+    mariadb
+    postgresql
+    nil
+    asm-lsp
+    cargo
+    rustc
+    clang-tools
+    gh
 
     # Development: JavaScript / TypeScript
     nodejs_22
@@ -346,6 +461,10 @@
     python3
     python3Packages.pip
     python3Packages.virtualenv
+
+    # Gaming & Compatibility Utilities
+    protontricks
+    pulseaudio
 
     # Development: Java Runtime
     jdk21
