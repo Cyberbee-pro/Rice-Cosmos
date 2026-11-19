@@ -1,4 +1,4 @@
-# Cosmos Rice
+# Cosmos Rice - V2 
 
 ![Full Banner](banner1.png)
 
