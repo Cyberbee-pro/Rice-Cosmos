@@ -18,7 +18,6 @@ bash "$SCRIPT_DIR/setup-kitty.sh"
 bash "$SCRIPT_DIR/setup-fastfetch.sh"
 bash "$SCRIPT_DIR/setup-starship.sh"
 bash "$SCRIPT_DIR/setup-nvim.sh"
-bash "$SCRIPT_DIR/setup-hypr.sh"
 bash "$SCRIPT_DIR/setup-caelestia.sh"
 bash "$SCRIPT_DIR/setup-bin.sh"
 

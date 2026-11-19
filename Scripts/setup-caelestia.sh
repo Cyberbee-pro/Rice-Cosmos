@@ -86,37 +86,37 @@ if [ "$need_shell" -eq 1 ] || [ "$need_cli" -eq 1 ]; then
     echo -e "${GREEN}[OK] Caelestia Shell & CLI installation complete.${NC}"
 fi
 
-# 3. Non-destructively back up existing ~/.config/caelestia
-if [ -L "$TARGET_DIR" ] || { [ -d "$TARGET_DIR" ] && [ -n "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; }; then
-    backup_path="${TARGET_DIR}.backup_$(date +%Y%m%d_%H%M%S)"
-    count=1
-    while [ -e "$backup_path" ] || [ -L "$backup_path" ]; do
-        backup_path="${TARGET_DIR}.backup_$(date +%Y%m%d_%H%M%S)_${count}"
-        count=$((count + 1))
-    done
-    echo -e "${YELLOW}[..] Backing up existing Caelestia configuration to: ${backup_path}${NC}"
-    if [ -L "$TARGET_DIR" ] && [ ! -e "$TARGET_DIR" ]; then
-        cp -P "$TARGET_DIR" "$backup_path"
-    else
-        cp -r "$TARGET_DIR" "$backup_path"
-    fi
-fi
-
-if [ -L "$TARGET_DIR" ]; then
-    rm -f "$TARGET_DIR"
-fi
-
+# 3. Non-destructively back up existing Caelestia user configuration files
 mkdir -p "$TARGET_DIR"
+FILES_TO_DEPLOY=("hypr-user.lua" "hypr-vars.lua" "shell.json")
 
-# 4. Deploy configs/caelestia/. in-place
-echo -e "${CYAN}[..] Deploying Caelestia configuration to ${TARGET_DIR}...${NC}"
-if cp -rf "$CAELESTIA_SRC/." "$TARGET_DIR/"; then
-    chmod -R u+w "$TARGET_DIR" 2>/dev/null || true
-    echo -e "${GREEN}[OK] Caelestia configuration deployed successfully to ${TARGET_DIR}.${NC}"
-else
-    echo -e "${RED}[ERR] Failed to copy Caelestia configuration.${NC}"
-    exit 1
-fi
+for item in "${FILES_TO_DEPLOY[@]}"; do
+    target_file="${TARGET_DIR}/${item}"
+    if [ -f "$target_file" ] || [ -L "$target_file" ]; then
+        backup_item="${target_file}.backup_$(date +%Y%m%d_%H%M%S)"
+        count=1
+        while [ -e "$backup_item" ] || [ -L "$backup_item" ]; do
+            backup_item="${target_file}.backup_$(date +%Y%m%d_%H%M%S)_${count}"
+            count=$((count + 1))
+        done
+        echo -e "${YELLOW}[..] Backing up existing ${item} to: ${backup_item}${NC}"
+        cp -L "$target_file" "$backup_item"
+    fi
+done
+
+# 4. Deploy ONLY hypr-user.lua, hypr-vars.lua, and shell.json (preserving monitors/)
+echo -e "${CYAN}[..] Deploying Caelestia configurations (hypr-user.lua, hypr-vars.lua, shell.json) to ${TARGET_DIR}...${NC}"
+for item in "${FILES_TO_DEPLOY[@]}"; do
+    src_file="${CAELESTIA_SRC}/${item}"
+    if [ -f "$src_file" ]; then
+        cp -f "$src_file" "${TARGET_DIR}/${item}"
+        chmod u+w "${TARGET_DIR}/${item}" 2>/dev/null || true
+        echo -e "${GREEN}[OK] Deployed ${item} to ${TARGET_DIR}/${item}.${NC}"
+    else
+        echo -e "${RED}[ERR] Source configuration file missing: ${src_file}${NC}"
+        exit 1
+    fi
+done
 
 # 5. Remove or back up leftover monolithic ~/.config/hypr/hyprland.conf to prevent shadowing hyprland.lua
 HYPR_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.conf"
