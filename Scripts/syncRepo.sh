@@ -40,7 +40,7 @@ for app in "${APPS[@]}"; do
     if [ -d "$src_app_dir" ] || [ -L "$src_app_dir" ]; then
         echo -e "${CYAN}[..] Harvesting ${app} from ${src_app_dir}...${NC}"
         mkdir -p "$dest_app_dir"
-        # Dereference symlinks (cp -rL) to capture real contents instead of broken Nix store links
+        # Dereference symlinks (cp -rL) to capture real file contents
         if cp -rL --remove-destination "${src_app_dir}"/. "${dest_app_dir}"/; then
             chmod -R u+w "${dest_app_dir}" 2>/dev/null || true
             echo -e "${GREEN}[OK] Harvested ${app} configuration successfully.${NC}"
