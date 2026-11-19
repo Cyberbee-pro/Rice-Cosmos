@@ -1,5 +1,5 @@
 # nixos/configuration.nix
-# Rice-Cosmos NixOS System Configuration (Hyprland + Caelestia Shell)
+# Cosmo CLI NixOS System Configuration (Hyprland + Caelestia Shell)
 
 { config, lib, pkgs, ... }:
 
@@ -70,7 +70,7 @@
   # 3. NETWORKING, FIREWALL & LOCALIZATION
   # =========================================================================
   networking = {
-    hostName = "rice-cosmos";
+    hostName = "cosmo-cli";
     networkmanager = {
       enable = true;
       dns = "default";

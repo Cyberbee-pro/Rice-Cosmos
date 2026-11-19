@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Standalone Fastfetch Setup
+#  COSMO CLI : Standalone Fastfetch Setup
 # ==============================================================================
 
 set -euo pipefail

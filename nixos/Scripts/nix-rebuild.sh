@@ -20,16 +20,20 @@ draw_progress() {
     echo -e "\033[1;33mStep $CURRENT_STEP/$TOTAL_STEPS: $1\033[0m"
 }
 
-# Resolve target host configuration (defaults to rice-cosmos or system hostname)
+# Resolve target host configuration (defaults to cosmo-cli, rice-cosmos, or system hostname)
 TARGET_HOST="${1:-}"
 if [ -z "$TARGET_HOST" ]; then
-    current_host="$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || echo "rice-cosmos")"
-    if [ "$current_host" = "rice-cosmos" ] || [ ! -f /etc/nixos/flake.nix ]; then
-        TARGET_HOST="rice-cosmos"
+    current_host="$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || echo "cosmo-cli")"
+    if [ "$current_host" = "cosmo-cli" ] || [ "$current_host" = "rice-cosmos" ] || [ ! -f /etc/nixos/flake.nix ]; then
+        if grep -q "nixosConfigurations\.${current_host}" /etc/nixos/flake.nix 2>/dev/null; then
+            TARGET_HOST="$current_host"
+        else
+            TARGET_HOST="cosmo-cli"
+        fi
     elif grep -q "nixosConfigurations\.${current_host}" /etc/nixos/flake.nix 2>/dev/null; then
         TARGET_HOST="$current_host"
     else
-        TARGET_HOST="rice-cosmos"
+        TARGET_HOST="cosmo-cli"
     fi
 fi
 

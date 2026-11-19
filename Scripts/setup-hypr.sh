@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Standalone Hyprland Runtime Packages Setup
+#  COSMO CLI : Standalone Hyprland Runtime Packages Setup
 # ==============================================================================
 
 set -euo pipefail

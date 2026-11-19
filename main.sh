@@ -7,7 +7,7 @@ if [ "${EUID:-$(id -u)}" -eq 0 ]; then
 fi
 
 # ==============================================================================
-#  COSMOS RICE : Master Orchestrator (Arch Linux & NixOS)
+#  COSMO CLI : Master Orchestrator (Arch Linux & NixOS)
 # ==============================================================================
 
 set -euo pipefail
@@ -119,13 +119,13 @@ render_character_art() {
     echo -e "${C_RESET}"
 }
 
-render_cosmos_cli_static() {
+render_cosmo_cli_static() {
     local -a lines=(
-        "   __________  _____ __  _______  _____   ________    ____"
-        "  / ____/ __ \\/ ___//  |/  / __ \\/ ___/  / ____/ /   /  _/"
-        " / /   / / / /\\__ \\/ /|_/ / / / /\\__ \\  / /   / /    / /  "
-        "/ /___/ /_/ /___/ / /  / / /_/ /___/ / / /___/ /____/ /   "
-        "\\____/\\____//____/_/  /_/\\____//____/  \\____/_____/___/   "
+        "   __________  _____ __  _______    ________    ____ "
+        "  / ____/ __ \\/ ___//  |/  / __ \\  / ____/ /   /  _/ "
+        " / /   / / / /\\__ \\/ /|_/ / / / /  / /   / /    / /  "
+        "/ /___/ /_/ /___/ / /  / / /_/ /  / /___/ /____/ /   "
+        "\\____/\\____//____/_/  /_/\\____/  \\____/_____/___/   "
     )
 
     for ((i = 0; i < ${#lines[@]}; i++)); do
@@ -148,7 +148,7 @@ render_cosmos_cli_static() {
 }
 
 render_status_bar() {
-    echo -e "  ${C_PURPLE}* ${C_BOLD}Cosmos Rice Deployment Suite${C_RESET} ${C_DIM}| Dual-Distro Architecture (Arch Linux & NixOS)${C_RESET}"
+    echo -e "  ${C_PURPLE}* ${C_BOLD}Cosmo CLI Deployment Suite${C_RESET} ${C_DIM}| Dual-Distro Architecture (Arch Linux & NixOS)${C_RESET}"
     echo -e "  ${C_BLUE}* Target System:${C_RESET} ${C_YELLOW}${DISTRO^^} (Caelestia Shell + Hyprland Lua)${C_RESET}"
     echo -e "  ${C_DARK}─────────────────────────────────────────────────────────────────────────────${C_RESET}\n"
 }
@@ -156,7 +156,7 @@ render_status_bar() {
 print_banner() {
     clear
     render_character_art
-    render_cosmos_cli_static
+    render_cosmo_cli_static
     render_status_bar
 }
 
@@ -218,7 +218,7 @@ run_all() {
     run_stage "syncWallpapers.sh"  "5/5: Deploying Wallpapers (Structured)"
 
     echo -e "  ${C_DARK}─────────────────────────────────────────────────────────────────────────────${C_RESET}"
-    echo -e "  ${C_GREEN}${C_BOLD}[OK] Cosmos Rice deployment completed for ${DISTRO^^}.${C_RESET}"
+    echo -e "  ${C_GREEN}${C_BOLD}[OK] Cosmo CLI deployment completed for ${DISTRO^^}.${C_RESET}"
     echo -e "  ${C_CYAN}-> Reload current shell via: ${C_YELLOW}exec \$SHELL${C_RESET}\n"
     read -rp "  Press [Enter] to exit..." || true
     exit 0
@@ -228,7 +228,7 @@ run_terminal_only() {
     print_banner
     echo -e "  ${C_YELLOW}* Starting Terminal-Only Setup (Bash + Kitty) for ${DISTRO^^}...${C_RESET}\n"
 
-    run_stage "setup-bash.sh"  "1/2: Configuring Standalone Bash & Cosmos Banner"
+    run_stage "setup-bash.sh"  "1/2: Configuring Standalone Bash & Cosmo Banner"
     run_stage "setup-kitty.sh" "2/2: Deploying Standalone Kitty Terminal"
 
     echo -e "  ${C_DARK}─────────────────────────────────────────────────────────────────────────────${C_RESET}"
@@ -307,7 +307,7 @@ while true; do
         7) print_banner; run_stage "SrodKitty.sh" "Deploying Dotfiles & Helper Binaries"; read -rp "  Press [Enter] to return..." || true; print_banner ;;
         8) print_banner; run_stage "setShell.sh" "Configuring Shells & Aliases"; read -rp "  Press [Enter] to return..." || true; print_banner ;;
         9) print_banner; run_stage "syncWallpapers.sh" "Deploying Wallpapers (Structured)"; read -rp "  Press [Enter] to return..." || true; print_banner ;;
-        0) echo -e "\n  ${C_DIM}Exiting Cosmos Rice installer.${C_RESET}\n"; exit 0 ;;
+        0) echo -e "\n  ${C_DIM}Exiting Cosmo CLI installer.${C_RESET}\n"; exit 0 ;;
         *) echo -e "\n  ${C_RED}[!] Invalid option selected.${C_RESET}"; sleep 1; print_banner ;;
     esac
 done

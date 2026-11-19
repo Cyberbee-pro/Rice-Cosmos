@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Standalone Starship Prompt Setup
+#  COSMO CLI : Standalone Starship Prompt Setup
 # ==============================================================================
 
 set -euo pipefail

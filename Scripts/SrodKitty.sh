@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Dotfiles & Helper Binaries Orchestration Wrapper
+#  COSMO CLI : Dotfiles & Helper Binaries Orchestration Wrapper
 # ==============================================================================
 
 set -euo pipefail

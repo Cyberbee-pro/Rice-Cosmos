@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Standalone Neovim Setup
+#  COSMO CLI : Standalone Neovim Setup
 # ==============================================================================
 
 set -euo pipefail

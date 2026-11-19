@@ -1,5 +1,5 @@
 {
-  description = "Rice-Cosmos NixOS Flake Configuration";
+  description = "Cosmo CLI NixOS Flake Configuration";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -16,7 +16,7 @@
   };
 
   outputs = { self, nixpkgs, qylock, hyprmod, ... }@inputs: {
-    nixosConfigurations.rice-cosmos = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.cosmo-cli = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
         ./configuration.nix
@@ -24,14 +24,13 @@
         ({ pkgs, ... }: {
           programs.qylock = {
             enable = true;
-            # Also supports "nier-automata" to match the Arch SDDM setup
-            theme = "clockwork/orbital";
-            themeOptions = {
-              clockwork.orbital = {
-                themeMode = "dark";
-                enableWindup = true;
-              };
-            };
+            # Default theme matching the Arch SDDM setup
+            theme = "nier-automata";
+            # Optional alternative: "clockwork/orbital"
+            # themeOptions.clockwork.orbital = {
+            #   themeMode = "dark";
+            #   enableWindup = true;
+            # };
           };
 
           environment.systemPackages = [
@@ -40,5 +39,6 @@
         })
       ];
     };
+    nixosConfigurations.rice-cosmos = self.nixosConfigurations.cosmo-cli;
   };
 }

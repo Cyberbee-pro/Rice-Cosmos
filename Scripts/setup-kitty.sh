@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Standalone Kitty Setup
+#  COSMO CLI : Standalone Kitty Setup
 # ==============================================================================
 
 set -euo pipefail

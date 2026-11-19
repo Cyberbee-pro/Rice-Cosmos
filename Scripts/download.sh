@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Asset & Package Downloader (Arch Linux & NixOS)
+#  COSMO CLI : Asset & Package Downloader (Arch Linux & NixOS)
 # ==============================================================================
 
 set -euo pipefail
@@ -11,6 +11,17 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
+
+# Repository Source & Fallback URLs
+REPO_URL="https://github.com/Cyberbee-pro/Cosmo-CLI.git"
+FALLBACK_REPO_URL="https://github.com/Cyberbee-pro/Rice-Cosmos.git"
+
+if git rev-parse --is-inside-work-tree &>/dev/null; then
+    current_remote="$(git config --get remote.origin.url 2>/dev/null || true)"
+    if [[ "$current_remote" == *"${FALLBACK_REPO_URL}"* ]] || [[ "$current_remote" == *"Rice-Cosmos"* ]]; then
+        echo -e "${YELLOW}[i] Current checkout remote points to legacy '${current_remote}'. Cosmo CLI upstream is '${REPO_URL}' (fallback: '${FALLBACK_REPO_URL}').${NC}"
+    fi
+fi
 
 detect_distro() {
     if [ -f /etc/os-release ]; then

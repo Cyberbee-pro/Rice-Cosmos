@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : System Theme & Shell Installer (Arch Linux & NixOS)
+#  COSMO CLI : System Theme & Shell Installer (Arch Linux & NixOS)
 # ==============================================================================
 
 set -euo pipefail
@@ -169,7 +169,7 @@ else
     fi
 
     echo -e "${GREEN}[OK] NixOS flake and configuration deployment complete.${NC}"
-    echo -e "${YELLOW}-> You can now rebuild your system with: sudo nixos-rebuild switch --flake /etc/nixos#rice-cosmos${NC}"
+    echo -e "${YELLOW}-> You can now rebuild your system with: sudo nixos-rebuild switch --flake /etc/nixos#cosmo-cli${NC}"
 
     # 5. Deploy Caelestia user-space dotfiles
     bash "$SCRIPT_DIR/setup-caelestia.sh"
