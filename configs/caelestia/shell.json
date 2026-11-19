@@ -36,7 +36,7 @@
     "general": {
         "apps": {
             "audio": [
-                "/nix/store/09h3yc7b74r3vydcicf26civfspagnpa-vlc-3.0.23-2/bin/vlc",
+                "vlc",
                 "--started-from-file"
             ],
             "terminal": [
@@ -53,7 +53,6 @@
     "services": {
         "gpuType": "NVIDIA",
         "maxVolume": 1.5,
-        "useFahrenheit": false,
         "visualiserBars": 68
     },
     "utilities": {

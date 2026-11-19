@@ -31,16 +31,30 @@ echo -e "${CYAN}[..] Harvesting live configurations from ${SRC_CONFIG_DIR} into 
 
 mkdir -p "$REPO_CONFIGS"
 
-# 1. Harvest Standard App Directories
-APPS=("hypr" "kitty" "fastfetch" "starship" "caelestia" "nvim")
+# 1. Harvest Standard App Directories (excluding hypr dotfiles; Caelestia excludes monitors/)
+APPS=("kitty" "fastfetch" "starship" "caelestia" "nvim")
 for app in "${APPS[@]}"; do
     src_app_dir="${SRC_CONFIG_DIR}/${app}"
     dest_app_dir="${REPO_CONFIGS}/${app}"
 
     if [ -d "$src_app_dir" ] || [ -L "$src_app_dir" ]; then
+        if [ "$app" = "caelestia" ]; then
+            echo -e "${CYAN}[..] Harvesting ${app} (excluding monitors/) from ${src_app_dir}...${NC}"
+            mkdir -p "$dest_app_dir"
+            for item in hypr-user.lua hypr-vars.lua shell.json; do
+                if [ -f "${src_app_dir}/${item}" ] || [ -L "${src_app_dir}/${item}" ]; then
+                    cp -L --remove-destination "${src_app_dir}/${item}" "${dest_app_dir}/${item}"
+                    chmod u+w "${dest_app_dir}/${item}" 2>/dev/null || true
+                fi
+            done
+            rm -rf "${dest_app_dir}/monitors" 2>/dev/null || true
+            echo -e "${GREEN}[OK] Harvested ${app} configuration successfully.${NC}"
+            continue
+        fi
+
         echo -e "${CYAN}[..] Harvesting ${app} from ${src_app_dir}...${NC}"
         mkdir -p "$dest_app_dir"
-        # Dereference symlinks (cp -rL) to capture real contents instead of broken Nix store links
+        # Dereference symlinks (cp -rL) to capture real file contents
         if cp -rL --remove-destination "${src_app_dir}"/. "${dest_app_dir}"/; then
             chmod -R u+w "${dest_app_dir}" 2>/dev/null || true
             echo -e "${GREEN}[OK] Harvested ${app} configuration successfully.${NC}"
@@ -65,13 +79,7 @@ if [ -f "$standalone_starship" ] || [ -L "$standalone_starship" ]; then
     fi
 fi
 
-# 3. Clean Legacy Hyprland Files (Ensure unified hyprland.lua only)
-if [ -f "${REPO_CONFIGS}/hypr/hyprland-gui.lua" ] || [ -L "${REPO_CONFIGS}/hypr/hyprland-gui.lua" ]; then
-    rm -f "${REPO_CONFIGS}/hypr/hyprland-gui.lua"
-    echo -e "${GREEN}[OK] Purged legacy hyprland-gui.lua from ${REPO_CONFIGS}/hypr/.${NC}"
-fi
-
-# 4. Harvest Helper Scripts (~/.local/bin -> ./Scripts/bin)
+# 3. Harvest Helper Scripts (~/.local/bin -> ./Scripts/bin)
 mkdir -p "$REPO_BIN"
 HELPER_SCRIPTS=("gamemode.sh" "toggle-hz.sh" "toggle-opacity.sh")
 for script in "${HELPER_SCRIPTS[@]}"; do
