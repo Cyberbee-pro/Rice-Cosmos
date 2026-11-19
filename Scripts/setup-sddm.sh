@@ -12,7 +12,38 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-echo -e "${CYAN}[..] Configuring Standalone SDDM Display Manager & QYLock Theme . . . .${NC}"
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        # shellcheck disable=SC1091
+        source /etc/os-release
+        case "${ID:-}:${ID_LIKE:-}" in
+            *nixos*|*nix*)
+                echo "nixos"
+                ;;
+            *arch*|*endeavouros*|*manjaro*|*garuda*|*artix*)
+                echo "arch"
+                ;;
+            *)
+                if command -v pacman &>/dev/null; then echo "arch";
+                elif command -v nix &>/dev/null; then echo "nixos";
+                else echo "arch"; fi
+                ;;
+        esac
+    else
+        if command -v pacman &>/dev/null; then echo "arch";
+        elif command -v nix &>/dev/null; then echo "nixos";
+        else echo "arch"; fi
+    fi
+}
+
+DISTRO="${DISTRO:-$(detect_distro)}"
+
+echo -e "${CYAN}[..] Configuring SDDM Display Manager & QYLock Theme (${DISTRO^^}) . . . .${NC}"
+
+if [ "$DISTRO" = "nixos" ]; then
+    echo -e "${YELLOW}[i] NixOS manages SDDM and display themes declaratively via configuration.nix. Skipping mutable setup & systemctl.${NC}"
+    exit 0
+fi
 
 # 1. Resolve root privileges
 RUN_AS_ROOT="sudo"

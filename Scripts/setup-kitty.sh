@@ -19,6 +19,32 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        # shellcheck disable=SC1091
+        source /etc/os-release
+        case "${ID:-}:${ID_LIKE:-}" in
+            *nixos*|*nix*)
+                echo "nixos"
+                ;;
+            *arch*|*endeavouros*|*manjaro*|*garuda*|*artix*)
+                echo "arch"
+                ;;
+            *)
+                if command -v pacman &>/dev/null; then echo "arch";
+                elif command -v nix &>/dev/null; then echo "nixos";
+                else echo "arch"; fi
+                ;;
+        esac
+    else
+        if command -v pacman &>/dev/null; then echo "arch";
+        elif command -v nix &>/dev/null; then echo "nixos";
+        else echo "arch"; fi
+    fi
+}
+
+DISTRO="${DISTRO:-$(detect_distro)}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -d "$SCRIPT_DIR/configs" ]; then
     REPO_ROOT="$SCRIPT_DIR"
@@ -31,29 +57,35 @@ fi
 KITTY_SRC="${REPO_ROOT}/configs/kitty"
 TARGET_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kitty"
 
-echo -e "${CYAN}[..] Configuring Standalone Kitty Terminal . . . .${NC}"
+echo -e "${CYAN}[..] Configuring Standalone Kitty Terminal (${DISTRO^^}) . . . .${NC}"
 
 if [ ! -d "$KITTY_SRC" ]; then
     echo -e "${RED}[ERR] Kitty source configuration not found: ${KITTY_SRC}${NC}"
     exit 1
 fi
 
-# 1. Ensure kitty and nerd font are installed via pacman
-missing_pkgs=()
-if ! command -v kitty &>/dev/null; then
-    missing_pkgs+=("kitty")
-fi
-if ! pacman -Q ttf-jetbrains-mono-nerd &>/dev/null; then
-    missing_pkgs+=("ttf-jetbrains-mono-nerd")
-fi
+# 1. Ensure kitty and nerd font are installed
+if [ "$DISTRO" = "arch" ]; then
+    missing_pkgs=()
+    if ! command -v kitty &>/dev/null; then
+        missing_pkgs+=("kitty")
+    fi
+    if ! pacman -Q ttf-jetbrains-mono-nerd &>/dev/null; then
+        missing_pkgs+=("ttf-jetbrains-mono-nerd")
+    fi
 
-if [ ${#missing_pkgs[@]} -gt 0 ]; then
-    echo -e "${YELLOW}[..] Installing missing packages via pacman: ${missing_pkgs[*]}...${NC}"
-    if command -v sudo &>/dev/null; then
-        sudo pacman -S --needed --noconfirm "${missing_pkgs[@]}"
-    else
-        echo -e "${RED}[ERR] sudo required to install: ${missing_pkgs[*]}${NC}"
-        exit 1
+    if [ ${#missing_pkgs[@]} -gt 0 ]; then
+        echo -e "${YELLOW}[..] Installing missing packages via pacman: ${missing_pkgs[*]}...${NC}"
+        if command -v sudo &>/dev/null; then
+            sudo pacman -S --needed --noconfirm "${missing_pkgs[@]}"
+        else
+            echo -e "${RED}[ERR] sudo required to install: ${missing_pkgs[*]}${NC}"
+            exit 1
+        fi
+    fi
+else
+    if ! command -v kitty &>/dev/null; then
+        echo -e "${YELLOW}[!] NixOS manages packages declaratively. Please add 'pkgs.kitty' and Nerd Fonts to your configuration.nix.${NC}"
     fi
 fi
 

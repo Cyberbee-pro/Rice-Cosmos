@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# cybees-clean.sh - System maintenance, space reclamation, and progress tracking
+# nix-cleanup.sh - System maintenance, space reclamation, and progress tracking
 
 # 1. Capture initial disk usage of the root partition (in KB)
 USED_BEFORE=$(df -k / | awk 'NR==2 {print $3}')

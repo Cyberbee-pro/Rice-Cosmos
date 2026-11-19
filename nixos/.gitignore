@@ -1,3 +1,7 @@
+# Nix build artifacts
+result
+result-*
+
 # NixOS secrets and sensitive configuration files
 # Prevent unencrypted credentials from being indexed into world-readable /nix/store
 *.key

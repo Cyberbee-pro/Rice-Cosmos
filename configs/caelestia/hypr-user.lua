@@ -2,7 +2,7 @@
 --  CAELESTIA HYPRLAND USER CONFIGURATION
 -- =============================================================================
 -- User tweaks, autostart, environment variables, window rules, and keybindings
--- using Caelestia's hl.* Lua API.
+-- using Caelestia's hl.* Lua API. Supports Arch Linux and NixOS.
 
 -- 1. Input Configuration (NumLock enabled by default)
 hl.config({
@@ -11,9 +11,26 @@ hl.config({
     },
 })
 
--- 2. Autostart Authentication Agent
+-- 2. Autostart Authentication Agent (Cross-Distro: Arch Linux & NixOS)
+local function get_polkit_agent()
+    local candidates = {
+        "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1",
+        "/run/current-system/sw/libexec/polkit-gnome-authentication-agent-1",
+        "/usr/libexec/polkit-gnome-authentication-agent-1",
+    }
+    for _, path in ipairs(candidates) do
+        local f = io.open(path, "r")
+        if f then
+            f:close()
+            return path
+        end
+    end
+    -- Fallback command that tests at runtime in shell
+    return "if [ -x /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 ]; then /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1; elif [ -x /run/current-system/sw/libexec/polkit-gnome-authentication-agent-1 ]; then /run/current-system/sw/libexec/polkit-gnome-authentication-agent-1; fi"
+end
+
 hl.on("hyprland.start", function ()
-    hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &")
+    hl.exec_cmd(get_polkit_agent() .. " &")
 end)
 
 -- 3. NVIDIA & Wayland Environment Variables

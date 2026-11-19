@@ -19,6 +19,32 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        # shellcheck disable=SC1091
+        source /etc/os-release
+        case "${ID:-}:${ID_LIKE:-}" in
+            *nixos*|*nix*)
+                echo "nixos"
+                ;;
+            *arch*|*endeavouros*|*manjaro*|*garuda*|*artix*)
+                echo "arch"
+                ;;
+            *)
+                if command -v pacman &>/dev/null; then echo "arch";
+                elif command -v nix &>/dev/null; then echo "nixos";
+                else echo "arch"; fi
+                ;;
+        esac
+    else
+        if command -v pacman &>/dev/null; then echo "arch";
+        elif command -v nix &>/dev/null; then echo "nixos";
+        else echo "arch"; fi
+    fi
+}
+
+DISTRO="${DISTRO:-$(detect_distro)}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -d "$SCRIPT_DIR/configs" ]; then
     REPO_ROOT="$SCRIPT_DIR"
@@ -31,56 +57,59 @@ fi
 CAELESTIA_SRC="${REPO_ROOT}/configs/caelestia"
 TARGET_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/caelestia"
 
-echo -e "${CYAN}[..] Configuring Standalone Caelestia Shell . . . .${NC}"
+echo -e "${CYAN}[..] Configuring Standalone Caelestia Shell (${DISTRO^^}) . . . .${NC}"
 
 if [ ! -d "$CAELESTIA_SRC" ]; then
     echo -e "${RED}[ERR] Caelestia source configuration not found: ${CAELESTIA_SRC}${NC}"
     exit 1
 fi
 
-# 1. Check and install Caelestia Shell & CLI via paru or yay
-need_shell=0
-need_cli=0
-if ! command -v caelestia &>/dev/null; then
-    need_cli=1
-fi
-if ! pacman -Q caelestia-shell &>/dev/null; then
-    need_shell=1
-fi
-
-if [ "$need_shell" -eq 1 ] || [ "$need_cli" -eq 1 ]; then
-    echo -e "${CYAN}[..] Checking AUR helper for Caelestia packages...${NC}"
-    AUR_HELPER=""
-    if command -v paru &>/dev/null; then
-        AUR_HELPER="paru"
-    elif command -v yay &>/dev/null; then
-        AUR_HELPER="yay"
+# 1. Check and install Caelestia Shell & CLI (Arch Linux via AUR helper; NixOS declaratively)
+if [ "$DISTRO" = "arch" ]; then
+    need_shell=0
+    need_cli=0
+    if ! command -v caelestia &>/dev/null; then
+        need_cli=1
+    fi
+    if ! pacman -Q caelestia-shell &>/dev/null; then
+        need_shell=1
     fi
 
-    if [ -z "$AUR_HELPER" ]; then
-        echo -e "${CYAN}[..] Neither paru nor yay found. Bootstrapping yay-bin . . . .${NC}"
-        # Ensure base-devel and git are present
-        if command -v sudo &>/dev/null; then
-            sudo pacman -S --needed --noconfirm base-devel git
-        else
-            echo -e "${RED}[ERR] sudo required to install base-devel and git for AUR bootstrapping.${NC}"
-            exit 1
+    if [ "$need_shell" -eq 1 ] || [ "$need_cli" -eq 1 ]; then
+        echo -e "${CYAN}[..] Checking AUR helper for Caelestia packages...${NC}"
+        AUR_HELPER=""
+        if command -v paru &>/dev/null; then
+            AUR_HELPER="paru"
+        elif command -v yay &>/dev/null; then
+            AUR_HELPER="yay"
         fi
-        rm -rf /tmp/yay-bin
-        git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
-        (
-            cd /tmp/yay-bin
-            makepkg -si --noconfirm
-        )
-        AUR_HELPER="yay"
-        echo -e "${GREEN}[OK] yay-bin bootstrapped successfully.${NC}"
-    else
-        echo -e "${GREEN}[OK] Detected existing AUR helper: ${AUR_HELPER}.${NC}"
-    fi
 
-    echo -e "${CYAN}[..] Installing caelestia-shell and caelestia-cli via ${AUR_HELPER}...${NC}"
-    "$AUR_HELPER" -S --needed --noconfirm caelestia-shell caelestia-cli
-    echo -e "${GREEN}[OK] Caelestia Shell & CLI installation complete.${NC}"
+        if [ -z "$AUR_HELPER" ]; then
+            echo -e "${CYAN}[..] Neither paru nor yay found. Bootstrapping yay-bin . . . .${NC}"
+            if command -v sudo &>/dev/null; then
+                sudo pacman -S --needed --noconfirm base-devel git
+            else
+                echo -e "${RED}[ERR] sudo required to install base-devel and git for AUR bootstrapping.${NC}"
+                exit 1
+            fi
+            rm -rf /tmp/yay-bin
+            git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
+            (
+                cd /tmp/yay-bin
+                makepkg -si --noconfirm
+            )
+            AUR_HELPER="yay"
+            echo -e "${GREEN}[OK] yay-bin bootstrapped successfully.${NC}"
+        else
+            echo -e "${GREEN}[OK] Detected existing AUR helper: ${AUR_HELPER}.${NC}"
+        fi
+
+        echo -e "${CYAN}[..] Installing caelestia-shell and caelestia-cli via ${AUR_HELPER}...${NC}"
+        "$AUR_HELPER" -S --needed --noconfirm caelestia-shell caelestia-cli
+        echo -e "${GREEN}[OK] Caelestia Shell & CLI installation complete.${NC}"
+    fi
+else
+    echo -e "${CYAN}[..] NixOS detected: Caelestia packages are managed declaratively via Flakes or nix profile.${NC}"
 fi
 
 # 2. Non-destructively back up existing Caelestia user configuration files

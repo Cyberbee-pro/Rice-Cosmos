@@ -19,6 +19,32 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        # shellcheck disable=SC1091
+        source /etc/os-release
+        case "${ID:-}:${ID_LIKE:-}" in
+            *nixos*|*nix*)
+                echo "nixos"
+                ;;
+            *arch*|*endeavouros*|*manjaro*|*garuda*|*artix*)
+                echo "arch"
+                ;;
+            *)
+                if command -v pacman &>/dev/null; then echo "arch";
+                elif command -v nix &>/dev/null; then echo "nixos";
+                else echo "arch"; fi
+                ;;
+        esac
+    else
+        if command -v pacman &>/dev/null; then echo "arch";
+        elif command -v nix &>/dev/null; then echo "nixos";
+        else echo "arch"; fi
+    fi
+}
+
+DISTRO="${DISTRO:-$(detect_distro)}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -d "$SCRIPT_DIR/configs" ]; then
     REPO_ROOT="$SCRIPT_DIR"
@@ -32,21 +58,25 @@ STARSHIP_SRC="${REPO_ROOT}/configs/starship"
 TARGET_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/starship"
 TARGET_TOML="${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml"
 
-echo -e "${CYAN}[..] Configuring Standalone Starship Prompt . . . .${NC}"
+echo -e "${CYAN}[..] Configuring Standalone Starship Prompt (${DISTRO^^}) . . . .${NC}"
 
 if [ ! -d "$STARSHIP_SRC" ]; then
     echo -e "${RED}[ERR] Starship source configuration not found: ${STARSHIP_SRC}${NC}"
     exit 1
 fi
 
-# 1. Ensure starship is installed via pacman
+# 1. Ensure starship is installed
 if ! command -v starship &>/dev/null; then
-    echo -e "${YELLOW}[..] starship is missing. Installing via pacman...${NC}"
-    if command -v sudo &>/dev/null; then
-        sudo pacman -S --needed --noconfirm starship
+    if [ "$DISTRO" = "arch" ]; then
+        echo -e "${YELLOW}[..] starship is missing. Installing via pacman...${NC}"
+        if command -v sudo &>/dev/null; then
+            sudo pacman -S --needed --noconfirm starship
+        else
+            echo -e "${RED}[ERR] sudo required to install starship.${NC}"
+            exit 1
+        fi
     else
-        echo -e "${RED}[ERR] sudo required to install starship.${NC}"
-        exit 1
+        echo -e "${YELLOW}[!] NixOS manages packages declaratively. Please add 'pkgs.starship' or 'programs.starship.enable = true' to your configuration.nix.${NC}"
     fi
 fi
 
