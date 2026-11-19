@@ -19,6 +19,32 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        # shellcheck disable=SC1091
+        source /etc/os-release
+        case "${ID:-}:${ID_LIKE:-}" in
+            *nixos*|*nix*)
+                echo "nixos"
+                ;;
+            *arch*|*endeavouros*|*manjaro*|*garuda*|*artix*)
+                echo "arch"
+                ;;
+            *)
+                if command -v pacman &>/dev/null; then echo "arch";
+                elif command -v nix &>/dev/null; then echo "nixos";
+                else echo "arch"; fi
+                ;;
+        esac
+    else
+        if command -v pacman &>/dev/null; then echo "arch";
+        elif command -v nix &>/dev/null; then echo "nixos";
+        else echo "arch"; fi
+    fi
+}
+
+DISTRO="${DISTRO:-$(detect_distro)}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -d "$SCRIPT_DIR/configs" ]; then
     REPO_ROOT="$SCRIPT_DIR"
@@ -31,21 +57,25 @@ fi
 NVIM_SRC="${REPO_ROOT}/configs/nvim"
 TARGET_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/nvim"
 
-echo -e "${CYAN}[..] Configuring Standalone Neovim . . . .${NC}"
+echo -e "${CYAN}[..] Configuring Standalone Neovim (${DISTRO^^}) . . . .${NC}"
 
 if [ ! -d "$NVIM_SRC" ]; then
     echo -e "${RED}[ERR] Neovim source configuration not found: ${NVIM_SRC}${NC}"
     exit 1
 fi
 
-# 1. Ensure neovim is installed via pacman
+# 1. Ensure neovim is installed
 if ! command -v nvim &>/dev/null; then
-    echo -e "${YELLOW}[..] neovim is missing. Installing via pacman...${NC}"
-    if command -v sudo &>/dev/null; then
-        sudo pacman -S --needed --noconfirm neovim
+    if [ "$DISTRO" = "arch" ]; then
+        echo -e "${YELLOW}[..] neovim is missing. Installing via pacman...${NC}"
+        if command -v sudo &>/dev/null; then
+            sudo pacman -S --needed --noconfirm neovim
+        else
+            echo -e "${RED}[ERR] sudo required to install neovim.${NC}"
+            exit 1
+        fi
     else
-        echo -e "${RED}[ERR] sudo required to install neovim.${NC}"
-        exit 1
+        echo -e "${YELLOW}[!] NixOS manages packages declaratively. Please add 'pkgs.neovim' to your configuration.nix.${NC}"
     fi
 fi
 

@@ -1,5 +1,5 @@
 {
-  description = "Cyberbee's NixOS Flake Configuration";
+  description = "Rice-Cosmos NixOS Flake Configuration";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -16,7 +16,7 @@
   };
 
   outputs = { self, nixpkgs, qylock, hyprmod, ... }@inputs: {
-    nixosConfigurations.cybees-nix = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.rice-cosmos = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
         ./configuration.nix
@@ -24,6 +24,7 @@
         ({ pkgs, ... }: {
           programs.qylock = {
             enable = true;
+            # Also supports "nier-automata" to match the Arch SDDM setup
             theme = "clockwork/orbital";
             themeOptions = {
               clockwork.orbital = {

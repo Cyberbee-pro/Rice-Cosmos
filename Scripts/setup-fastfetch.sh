@@ -19,6 +19,32 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        # shellcheck disable=SC1091
+        source /etc/os-release
+        case "${ID:-}:${ID_LIKE:-}" in
+            *nixos*|*nix*)
+                echo "nixos"
+                ;;
+            *arch*|*endeavouros*|*manjaro*|*garuda*|*artix*)
+                echo "arch"
+                ;;
+            *)
+                if command -v pacman &>/dev/null; then echo "arch";
+                elif command -v nix &>/dev/null; then echo "nixos";
+                else echo "arch"; fi
+                ;;
+        esac
+    else
+        if command -v pacman &>/dev/null; then echo "arch";
+        elif command -v nix &>/dev/null; then echo "nixos";
+        else echo "arch"; fi
+    fi
+}
+
+DISTRO="${DISTRO:-$(detect_distro)}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -d "$SCRIPT_DIR/configs" ]; then
     REPO_ROOT="$SCRIPT_DIR"
@@ -31,21 +57,25 @@ fi
 FASTFETCH_SRC="${REPO_ROOT}/configs/fastfetch"
 TARGET_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch"
 
-echo -e "${CYAN}[..] Configuring Standalone Fastfetch . . . .${NC}"
+echo -e "${CYAN}[..] Configuring Standalone Fastfetch (${DISTRO^^}) . . . .${NC}"
 
 if [ ! -d "$FASTFETCH_SRC" ]; then
     echo -e "${RED}[ERR] Fastfetch source configuration not found: ${FASTFETCH_SRC}${NC}"
     exit 1
 fi
 
-# 1. Ensure fastfetch is installed via pacman
+# 1. Ensure fastfetch is installed
 if ! command -v fastfetch &>/dev/null; then
-    echo -e "${YELLOW}[..] fastfetch is missing. Installing via pacman...${NC}"
-    if command -v sudo &>/dev/null; then
-        sudo pacman -S --needed --noconfirm fastfetch
+    if [ "$DISTRO" = "arch" ]; then
+        echo -e "${YELLOW}[..] fastfetch is missing. Installing via pacman...${NC}"
+        if command -v sudo &>/dev/null; then
+            sudo pacman -S --needed --noconfirm fastfetch
+        else
+            echo -e "${RED}[ERR] sudo required to install fastfetch.${NC}"
+            exit 1
+        fi
     else
-        echo -e "${RED}[ERR] sudo required to install fastfetch.${NC}"
-        exit 1
+        echo -e "${YELLOW}[!] NixOS manages packages declaratively. Please add 'pkgs.fastfetch' to your configuration.nix.${NC}"
     fi
 fi
 

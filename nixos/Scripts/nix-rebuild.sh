@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# cybees-rebuild.sh - NixOS flake deployment and progress tracking
+# nix-rebuild.sh - NixOS flake deployment and progress tracking
+
+set -euo pipefail
 
 TOTAL_STEPS=3
 CURRENT_STEP=0
@@ -7,18 +9,31 @@ CURRENT_STEP=0
 # 1. Start execution timer
 START_TIME=$(date +%s)
 
-# 2. Progress bar function (matches your cleanup script)
+# 2. Progress bar function
 draw_progress() {
     CURRENT_STEP=$((CURRENT_STEP + 1))
     local percent=$((CURRENT_STEP * 100 / TOTAL_STEPS))
     local filled=$((CURRENT_STEP * 40 / TOTAL_STEPS))
     local empty=$((40 - filled))
-    
+
     echo -e "\n\033[1;36m[$(printf "%${filled}s" | tr ' ' '#')$(printf "%${empty}s" | tr ' ' '-')] ${percent}%\033[0m"
     echo -e "\033[1;33mStep $CURRENT_STEP/$TOTAL_STEPS: $1\033[0m"
 }
 
-echo -e "\n\033[1;36mStarting NixOS System Rebuild...\033[0m"
+# Resolve target host configuration (defaults to rice-cosmos or system hostname)
+TARGET_HOST="${1:-}"
+if [ -z "$TARGET_HOST" ]; then
+    current_host="$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || echo "rice-cosmos")"
+    if [ "$current_host" = "rice-cosmos" ] || [ ! -f /etc/nixos/flake.nix ]; then
+        TARGET_HOST="rice-cosmos"
+    elif grep -q "nixosConfigurations\.${current_host}" /etc/nixos/flake.nix 2>/dev/null; then
+        TARGET_HOST="$current_host"
+    else
+        TARGET_HOST="rice-cosmos"
+    fi
+fi
+
+echo -e "\n\033[1;36mStarting NixOS System Rebuild (${TARGET_HOST})...\033[0m"
 
 # Step 1
 draw_progress "Navigating to NixOS config directory"
@@ -29,27 +44,26 @@ fi
 
 # Step 2
 draw_progress "Staging configuration changes for Flake visibility"
-# Flakes cannot see untracked files. Stage only explicit required Nix configuration paths.
 target_paths=()
-for path in flake.nix flake.lock configuration.nix hardware-configuration.nix cachix.nix cachix assets Scripts .gitignore; do
+for path in flake.nix flake.lock configuration.nix hardware-configuration.nix Scripts .gitignore; do
     if [ -e "$path" ]; then
         target_paths+=("$path")
     fi
 done
 
 if [ ${#target_paths[@]} -gt 0 ]; then
-    git add -- "${target_paths[@]}"
+    if [ -d .git ] || git rev-parse --is-inside-work-tree &>/dev/null; then
+        git add -- "${target_paths[@]}" 2>/dev/null || true
+        git status -s
+    fi
 fi
 
-# Briefly show what files were modified/staged before the build output starts
-git status -s
-
 # Step 3
-draw_progress "Executing NixOS Rebuild (Switching to cybees-nix)"
+draw_progress "Executing NixOS Rebuild (Switching to ${TARGET_HOST})"
 echo -e "\033[1;30m(This may take a few minutes depending on compilation...)\033[0m\n"
 
 # Execute the rebuild and capture the exact exit status
-if sudo nixos-rebuild switch --flake /etc/nixos#cybees-nix; then
+if sudo nixos-rebuild switch --flake "/etc/nixos#${TARGET_HOST}"; then
     REBUILD_EXIT=0
     BUILD_STATUS="\033[1;32mRebuild Successful! System updated.\033[0m"
 else

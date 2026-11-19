@@ -19,6 +19,32 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        # shellcheck disable=SC1091
+        source /etc/os-release
+        case "${ID:-}:${ID_LIKE:-}" in
+            *nixos*|*nix*)
+                echo "nixos"
+                ;;
+            *arch*|*endeavouros*|*manjaro*|*garuda*|*artix*)
+                echo "arch"
+                ;;
+            *)
+                if command -v pacman &>/dev/null; then echo "arch";
+                elif command -v nix &>/dev/null; then echo "nixos";
+                else echo "arch"; fi
+                ;;
+        esac
+    else
+        if command -v pacman &>/dev/null; then echo "arch";
+        elif command -v nix &>/dev/null; then echo "nixos";
+        else echo "arch"; fi
+    fi
+}
+
+DISTRO="${DISTRO:-$(detect_distro)}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -d "$SCRIPT_DIR/ascii_arts" ]; then
     REPO_ROOT="$SCRIPT_DIR"
@@ -28,16 +54,20 @@ else
     REPO_ROOT="$SCRIPT_DIR"
 fi
 
-echo -e "${CYAN}[..] Configuring Standalone Zsh Environment . . . .${NC}"
+echo -e "${CYAN}[..] Configuring Standalone Zsh Environment (${DISTRO^^}) . . . .${NC}"
 
-# 1. Ensure zsh is installed via pacman
+# 1. Ensure zsh is installed
 if ! command -v zsh &>/dev/null; then
-    echo -e "${YELLOW}[..] zsh is missing. Installing via pacman...${NC}"
-    if command -v sudo &>/dev/null; then
-        sudo pacman -S --needed --noconfirm zsh
+    if [ "$DISTRO" = "arch" ]; then
+        echo -e "${YELLOW}[..] zsh is missing. Installing via pacman...${NC}"
+        if command -v sudo &>/dev/null; then
+            sudo pacman -S --needed --noconfirm zsh
+        else
+            echo -e "${RED}[ERR] sudo required to install zsh.${NC}"
+            exit 1
+        fi
     else
-        echo -e "${RED}[ERR] sudo required to install zsh.${NC}"
-        exit 1
+        echo -e "${YELLOW}[!] NixOS manages packages declaratively. Please enable 'programs.zsh.enable = true' in your configuration.nix.${NC}"
     fi
 fi
 
@@ -47,6 +77,7 @@ ASCII_SRC="${REPO_ROOT}/ascii_arts"
 ASCII_DEST="${COSMOS_BASE}/ascii_arts"
 SCRIPTS_SRC="${REPO_ROOT}/Scripts"
 COSMOS_SCRIPTS_DEST="${COSMOS_BASE}/Scripts"
+NIXOS_SCRIPTS_SRC="${REPO_ROOT}/nixos/Scripts"
 
 mkdir -p "$COSMOS_BASE" "$ASCII_DEST" "$COSMOS_SCRIPTS_DEST"
 
@@ -66,6 +97,17 @@ if [ -d "$SCRIPTS_SRC" ]; then
     done
     chmod +x "$COSMOS_SCRIPTS_DEST"/*.sh 2>/dev/null || true
     echo -e "${GREEN}[OK] Utility scripts synced to ${COSMOS_SCRIPTS_DEST}.${NC}"
+fi
+
+if [ -d "$NIXOS_SCRIPTS_SRC" ]; then
+    echo -e "${CYAN}[..] Syncing NixOS utility scripts to ${COSMOS_SCRIPTS_DEST}...${NC}"
+    for script_file in "$NIXOS_SCRIPTS_SRC"/*; do
+        [ -f "$script_file" ] || [ -L "$script_file" ] || continue
+        base_name="$(basename "$script_file")"
+        cp -L --remove-destination "$script_file" "${COSMOS_SCRIPTS_DEST}/${base_name}"
+    done
+    chmod +x "$COSMOS_SCRIPTS_DEST"/* 2>/dev/null || true
+    echo -e "${GREEN}[OK] NixOS utility scripts synced to ${COSMOS_SCRIPTS_DEST}.${NC}"
 fi
 
 # 3. Generate script aliases from ~/.config/Cosmos/Scripts/

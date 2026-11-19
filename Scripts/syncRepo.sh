@@ -98,4 +98,30 @@ for script in "${HELPER_SCRIPTS[@]}"; do
     fi
 done
 
+# 4. Harvest NixOS Configurations (/etc/nixos -> ./nixos)
+# Note: hardware-configuration.nix (machine UUIDs) and cachix.nix are strictly excluded
+if [ -d "/etc/nixos" ]; then
+    echo -e "${CYAN}[..] Harvesting live NixOS configurations from /etc/nixos into ${REPO_ROOT}/nixos...${NC}"
+    mkdir -p "${REPO_ROOT}/nixos"
+    for item in configuration.nix flake.nix flake.lock .gitignore; do
+        if [ -e "/etc/nixos/$item" ]; then
+            cp -L --remove-destination "/etc/nixos/$item" "${REPO_ROOT}/nixos/${item}"
+            chmod u+w "${REPO_ROOT}/nixos/${item}" 2>/dev/null || true
+            echo -e "${GREEN}[OK] Harvested ${item} into ${REPO_ROOT}/nixos/${item}.${NC}"
+        fi
+    done
+
+    # Harvest NixOS helper scripts if present in /etc/nixos/Scripts
+    if [ -d "/etc/nixos/Scripts" ]; then
+        mkdir -p "${REPO_ROOT}/nixos/Scripts"
+        for script_file in /etc/nixos/Scripts/*; do
+            [ -f "$script_file" ] || [ -L "$script_file" ] || continue
+            s_name="$(basename "$script_file")"
+            cp -L --remove-destination "$script_file" "${REPO_ROOT}/nixos/Scripts/${s_name}"
+            chmod +x "${REPO_ROOT}/nixos/Scripts/${s_name}" 2>/dev/null || true
+        done
+        echo -e "${GREEN}[OK] Harvested NixOS maintenance scripts.${NC}"
+    fi
+fi
+
 echo -e "${GREEN}[OK] Live repository configuration harvesting complete.${NC}"
