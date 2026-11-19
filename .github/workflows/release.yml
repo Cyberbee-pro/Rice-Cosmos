@@ -1,0 +1,141 @@
+name: Rice-Cosmos Automated Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+
+      - name: Validate Shell Scripts
+        run: |
+          find . -name '*.sh' -exec shellcheck {} +
+
+      - name: Parse Release Flag & Compute Version
+        id: versioning
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git fetch --tags --force
+
+          # Check both commit/PR subject line and final non-empty body line
+          SUBJECT_LINE=$(printf '%s\n' "$COMMIT_MSG" | awk 'NF {print; exit}')
+          LAST_LINE=$(printf '%s\n' "$COMMIT_MSG" | awk 'NF {line=$0} END {print line}')
+
+          SHOULD_RELEASE="false"
+          EXP_VERSION=""
+
+          if [[ "$SUBJECT_LINE" =~ (^|[[:space:]])--rel-v-([0-9]+(\.[0-9]+)*)[[:space:]]*$ ]]; then
+            SHOULD_RELEASE="true"
+            EXP_VERSION="${BASH_REMATCH[2]}"
+          elif [[ "$LAST_LINE" =~ (^|[[:space:]])--rel-v-([0-9]+(\.[0-9]+)*)[[:space:]]*$ ]]; then
+            SHOULD_RELEASE="true"
+            EXP_VERSION="${BASH_REMATCH[2]}"
+          elif [[ "$SUBJECT_LINE" =~ (^|[[:space:]])--rel[[:space:]]*$ ]] || [[ "$LAST_LINE" =~ (^|[[:space:]])--rel[[:space:]]*$ ]]; then
+            SHOULD_RELEASE="true"
+          fi
+
+          if [ "$SHOULD_RELEASE" != "true" ]; then
+            echo "SHOULD_RELEASE=false" >> "$GITHUB_OUTPUT"
+            echo "No trailing --rel or --rel-v-x flag detected. Skipping release."
+            exit 0
+          fi
+
+          # Find highest existing V* tag (e.g., V1, V1.2, V2.4)
+          LATEST_TAG=$(git tag -l "V[0-9]*" 2>/dev/null | sort -V | tail -n 1 || true)
+
+          if [ -n "$EXP_VERSION" ]; then
+            TARGET_VERSION="$EXP_VERSION"
+          elif [ -z "$LATEST_TAG" ]; then
+            TARGET_VERSION="1"
+          else
+            VERSION_NUM="${LATEST_TAG#V}"
+            VERSION_NUM="${VERSION_NUM%%-*}"
+
+            if [[ "$VERSION_NUM" == *.* ]]; then
+              BASE_MAJOR="${VERSION_NUM%%.*}"
+              REST="${VERSION_NUM#*.}"
+              BASE_MINOR="${REST%%.*}"
+            else
+              BASE_MAJOR="$VERSION_NUM"
+              BASE_MINOR=0
+            fi
+
+            NEW_MINOR=$((BASE_MINOR + 1))
+            TARGET_VERSION="${BASE_MAJOR}.${NEW_MINOR}"
+          fi
+
+          # Collision guard if explicit tag already exists
+          FINAL_TAG="V${TARGET_VERSION}"
+          BASE_TARGET="$FINAL_TAG"
+          COUNTER=1
+
+          while git rev-parse "$FINAL_TAG" >/dev/null 2>&1; do
+            echo "Tag $FINAL_TAG already exists; appending build offset..."
+            FINAL_TAG="${BASE_TARGET}-build${GITHUB_RUN_NUMBER}-${COUNTER}"
+            COUNTER=$((COUNTER + 1))
+          done
+
+          echo "SHOULD_RELEASE=true" >> "$GITHUB_OUTPUT"
+          echo "TAG_NAME=${FINAL_TAG}" >> "$GITHUB_OUTPUT"
+          echo "RELEASE_NAME=Rice-Cosmos ${FINAL_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Resolved release tag: ${FINAL_TAG}"
+
+      - name: Commit Version & Push Tag as GitHub Actions
+        if: steps.versioning.outputs.SHOULD_RELEASE == 'true'
+        env:
+          FINAL_TAG: ${{ steps.versioning.outputs.TAG_NAME }}
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          printf '%s\n' "$FINAL_TAG" > VERSION
+          git add VERSION
+
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(release): ${FINAL_TAG} [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+          git tag -a "$FINAL_TAG" -m "Release ${FINAL_TAG}"
+          git push origin "$FINAL_TAG"
+
+      - name: Package Release Archives
+        if: steps.versioning.outputs.SHOULD_RELEASE == 'true'
+        env:
+          FINAL_TAG: ${{ steps.versioning.outputs.TAG_NAME }}
+        run: |
+          mkdir -p dist
+          tar --exclude='.git' --exclude='.github' --exclude='dist' -czf "dist/Rice-Cosmos-${FINAL_TAG}.tar.gz" .
+          zip -rq "dist/Rice-Cosmos-${FINAL_TAG}.zip" . -x '.git/*' '.github/*' 'dist/*'
+
+      - name: Create GitHub Release
+        if: steps.versioning.outputs.SHOULD_RELEASE == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.versioning.outputs.TAG_NAME }}
+          name: ${{ steps.versioning.outputs.RELEASE_NAME }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          files: |
+            dist/Rice-Cosmos-*.tar.gz
+            dist/Rice-Cosmos-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
