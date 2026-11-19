@@ -97,7 +97,8 @@ jobs:
           echo "RELEASE_NAME=Rice-Cosmos ${FINAL_TAG}" >> "$GITHUB_OUTPUT"
           echo "Resolved release tag: ${FINAL_TAG}"
 
-      - name: Commit Version & Push Tag as GitHub Actions
+      - name: Commit Version as GitHub Actions
+        id: commit_version
         if: steps.versioning.outputs.SHOULD_RELEASE == 'true'
         env:
           FINAL_TAG: ${{ steps.versioning.outputs.TAG_NAME }}
@@ -113,8 +114,7 @@ jobs:
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
 
-          git tag -a "$FINAL_TAG" -m "Release ${FINAL_TAG}"
-          git push origin "$FINAL_TAG"
+          echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Package Release Archives
         if: steps.versioning.outputs.SHOULD_RELEASE == 'true'
@@ -130,6 +130,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.versioning.outputs.TAG_NAME }}
+          target_commitish: ${{ steps.commit_version.outputs.RELEASE_SHA }}
           name: ${{ steps.versioning.outputs.RELEASE_NAME }}
           generate_release_notes: true
           draft: false
