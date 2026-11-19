@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Standalone Helper Binaries Setup
+#  COSMO CLI : Standalone Helper Binaries Setup
 # ==============================================================================
 
 set -euo pipefail

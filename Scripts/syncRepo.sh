@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Live Configuration Harvester (System -> Repo)
+#  COSMO CLI : Live Configuration Harvester (System -> Repo)
 # ==============================================================================
 
 set -euo pipefail

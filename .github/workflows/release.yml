@@ -1,4 +1,4 @@
-name: Rice-Cosmos Automated Release
+name: Cosmo CLI Automated Release
 
 on:
   push:
@@ -94,7 +94,7 @@ jobs:
 
           echo "SHOULD_RELEASE=true" >> "$GITHUB_OUTPUT"
           echo "TAG_NAME=${FINAL_TAG}" >> "$GITHUB_OUTPUT"
-          echo "RELEASE_NAME=Rice-Cosmos ${FINAL_TAG}" >> "$GITHUB_OUTPUT"
+          echo "RELEASE_NAME=Cosmo CLI ${FINAL_TAG}" >> "$GITHUB_OUTPUT"
           echo "Resolved release tag: ${FINAL_TAG}"
 
       - name: Commit Version as GitHub Actions
@@ -122,8 +122,8 @@ jobs:
           FINAL_TAG: ${{ steps.versioning.outputs.TAG_NAME }}
         run: |
           mkdir -p dist
-          tar --exclude='.git' --exclude='.github' --exclude='dist' -czf "dist/Rice-Cosmos-${FINAL_TAG}.tar.gz" .
-          zip -rq "dist/Rice-Cosmos-${FINAL_TAG}.zip" . -x '.git/*' '.github/*' 'dist/*'
+          tar --exclude='.git' --exclude='.github' --exclude='dist' -czf "dist/Cosmo-CLI-${FINAL_TAG}.tar.gz" .
+          zip -rq "dist/Cosmo-CLI-${FINAL_TAG}.zip" . -x '.git/*' '.github/*' 'dist/*'
 
       - name: Create GitHub Release
         if: steps.versioning.outputs.SHOULD_RELEASE == 'true'
@@ -136,7 +136,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            dist/Rice-Cosmos-*.tar.gz
-            dist/Rice-Cosmos-*.zip
+            dist/Cosmo-CLI-*.tar.gz
+            dist/Cosmo-CLI-*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

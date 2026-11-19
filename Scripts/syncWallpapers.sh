@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Wallpaper Deployer (Preserves Folder Hierarchy)
+#  COSMO CLI : Wallpaper Deployer (Preserves Folder Hierarchy)
 # ==============================================================================
 
 set -euo pipefail

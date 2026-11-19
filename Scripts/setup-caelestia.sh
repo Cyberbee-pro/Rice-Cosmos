@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Standalone Caelestia Shell Setup
+#  COSMO CLI : Standalone Caelestia Shell Setup
 # ==============================================================================
 
 set -euo pipefail

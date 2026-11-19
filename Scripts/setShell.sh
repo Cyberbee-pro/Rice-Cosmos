@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Shell Environment Orchestrator (Bash & Zsh)
+#  COSMO CLI : Shell Environment Orchestrator (Bash & Zsh)
 # ==============================================================================
 
 set -euo pipefail

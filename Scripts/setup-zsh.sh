@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Standalone Zsh Setup
+#  COSMO CLI : Standalone Zsh Setup
 # ==============================================================================
 
 set -euo pipefail
@@ -110,9 +110,21 @@ if [ -d "$NIXOS_SCRIPTS_SRC" ]; then
     echo -e "${GREEN}[OK] NixOS utility scripts synced to ${COSMOS_SCRIPTS_DEST}.${NC}"
 fi
 
+if [ -f "${REPO_ROOT}/main.sh" ]; then
+    cp -L --remove-destination "${REPO_ROOT}/main.sh" "${COSMOS_SCRIPTS_DEST}/main.sh"
+    chmod +x "${COSMOS_SCRIPTS_DEST}/main.sh" 2>/dev/null || true
+fi
+
 # 3. Generate script aliases from ~/.config/Cosmos/Scripts/
 SCRIPT_ALIASES=""
 declare -A seen_aliases=()
+
+# Primary Cosmo CLI aliases to launch main.sh
+SCRIPT_ALIASES="${SCRIPT_ALIASES}    alias cosmo='~/.config/Cosmos/Scripts/main.sh'"$'\n'
+SCRIPT_ALIASES="${SCRIPT_ALIASES}    alias cosmos='~/.config/Cosmos/Scripts/main.sh'"$'\n'
+seen_aliases["cosmo"]=1
+seen_aliases["cosmos"]=1
+seen_aliases["main"]=1
 
 for script_file in "$COSMOS_SCRIPTS_DEST"/*; do
     [ -f "$script_file" ] || [ -L "$script_file" ] || continue

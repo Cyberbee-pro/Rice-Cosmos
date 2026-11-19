@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-#  COSMOS RICE : Standalone SDDM & QYLock Theme Setup
+#  COSMO CLI : Standalone SDDM & QYLock Theme Setup
 # ==============================================================================
 
 set -euo pipefail
