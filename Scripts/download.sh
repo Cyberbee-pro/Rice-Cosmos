@@ -62,7 +62,7 @@ sync_repo() {
     echo -e "${CYAN}[..] Syncing ${name} . . . .${NC}"
     if [ -d "$target_dir/.git" ]; then
         echo -e "${YELLOW}Updating ${name}...${NC}"
-        git -C "$target_dir" pull --ff-only 2>/dev/null || {
+        git -C "$target_dir" pull --ff-only || {
             echo -e "${RED}Fast-forward failed. Re-cloning ${name}...${NC}"
             rm -rf "$target_dir"
             git clone "$repo_url" "$target_dir"
