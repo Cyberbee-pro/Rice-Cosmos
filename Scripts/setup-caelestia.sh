@@ -6,6 +6,13 @@
 
 set -euo pipefail
 
+# Reject root/sudo invocation
+if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+    echo -e "\033[0;31m[ERR] Please do not run this script as root or with sudo.\033[0m" >&2
+    echo -e "\033[0;33m[!] Run as your regular desktop user. Elevation (sudo) will be prompted automatically if packages need to be installed.\033[0m" >&2
+    exit 1
+fi
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -31,18 +38,7 @@ if [ ! -d "$CAELESTIA_SRC" ]; then
     exit 1
 fi
 
-# 1. Determine user runner for AUR operations (makepkg/paru/yay MUST NOT run as root)
-if [ "$EUID" -eq 0 ]; then
-    if [ -z "${SUDO_USER:-}" ] || [ "${SUDO_USER}" = "root" ]; then
-        echo -e "${RED}[ERR] AUR helpers cannot run as root, and no non-root SUDO_USER was found.${NC}"
-        exit 1
-    fi
-    run_as_user() { sudo -u "$SUDO_USER" "$@"; }
-else
-    run_as_user() { "$@"; }
-fi
-
-# 2. Check and install Caelestia Shell & CLI via paru or yay
+# 1. Check and install Caelestia Shell & CLI via paru or yay
 need_shell=0
 need_cli=0
 if ! command -v caelestia &>/dev/null; then
@@ -64,16 +60,17 @@ if [ "$need_shell" -eq 1 ] || [ "$need_cli" -eq 1 ]; then
     if [ -z "$AUR_HELPER" ]; then
         echo -e "${CYAN}[..] Neither paru nor yay found. Bootstrapping yay-bin . . . .${NC}"
         # Ensure base-devel and git are present
-        if [ "$EUID" -eq 0 ]; then
-            pacman -S --needed --noconfirm base-devel git
-        elif command -v sudo &>/dev/null; then
+        if command -v sudo &>/dev/null; then
             sudo pacman -S --needed --noconfirm base-devel git
+        else
+            echo -e "${RED}[ERR] sudo required to install base-devel and git for AUR bootstrapping.${NC}"
+            exit 1
         fi
         rm -rf /tmp/yay-bin
-        run_as_user git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
+        git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
         (
             cd /tmp/yay-bin
-            run_as_user makepkg -si --noconfirm
+            makepkg -si --noconfirm
         )
         AUR_HELPER="yay"
         echo -e "${GREEN}[OK] yay-bin bootstrapped successfully.${NC}"
@@ -82,17 +79,17 @@ if [ "$need_shell" -eq 1 ] || [ "$need_cli" -eq 1 ]; then
     fi
 
     echo -e "${CYAN}[..] Installing caelestia-shell and caelestia-cli via ${AUR_HELPER}...${NC}"
-    run_as_user "$AUR_HELPER" -S --needed --noconfirm caelestia-shell caelestia-cli
+    "$AUR_HELPER" -S --needed --noconfirm caelestia-shell caelestia-cli
     echo -e "${GREEN}[OK] Caelestia Shell & CLI installation complete.${NC}"
 fi
 
-# 3. Non-destructively back up existing Caelestia user configuration files
+# 2. Non-destructively back up existing Caelestia user configuration files
 mkdir -p "$TARGET_DIR"
 FILES_TO_DEPLOY=("hypr-user.lua" "hypr-vars.lua" "shell.json")
 
 for item in "${FILES_TO_DEPLOY[@]}"; do
     target_file="${TARGET_DIR}/${item}"
-    if [ -f "$target_file" ] || [ -L "$target_file" ]; then
+    if [ -e "$target_file" ] || [ -L "$target_file" ]; then
         backup_item="${target_file}.backup_$(date +%Y%m%d_%H%M%S)"
         count=1
         while [ -e "$backup_item" ] || [ -L "$backup_item" ]; do
@@ -100,25 +97,42 @@ for item in "${FILES_TO_DEPLOY[@]}"; do
             count=$((count + 1))
         done
         echo -e "${YELLOW}[..] Backing up existing ${item} to: ${backup_item}${NC}"
-        cp -L "$target_file" "$backup_item"
+        cp -P "$target_file" "$backup_item"
     fi
 done
 
-# 4. Deploy ONLY hypr-user.lua, hypr-vars.lua, and shell.json (preserving monitors/)
+# 3. Deploy ONLY hypr-user.lua, hypr-vars.lua, and shell.json (preserving monitors/) via atomic replacement
 echo -e "${CYAN}[..] Deploying Caelestia configurations (hypr-user.lua, hypr-vars.lua, shell.json) to ${TARGET_DIR}...${NC}"
+
+tmp_files=()
+cleanup_tmp() {
+    for f in "${tmp_files[@]}"; do
+        if [ -n "$f" ] && [ -f "$f" ]; then
+            rm -f "$f"
+        fi
+    done
+}
+trap cleanup_tmp EXIT INT TERM
+
 for item in "${FILES_TO_DEPLOY[@]}"; do
     src_file="${CAELESTIA_SRC}/${item}"
+    dest_file="${TARGET_DIR}/${item}"
     if [ -f "$src_file" ]; then
-        cp -f "$src_file" "${TARGET_DIR}/${item}"
-        chmod u+w "${TARGET_DIR}/${item}" 2>/dev/null || true
-        echo -e "${GREEN}[OK] Deployed ${item} to ${TARGET_DIR}/${item}.${NC}"
+        tmp_file="$(mktemp "${dest_file}.tmp.XXXXXX")"
+        tmp_files+=("$tmp_file")
+        cp -f "$src_file" "$tmp_file"
+        chmod 0644 "$tmp_file"
+        mv -f "$tmp_file" "$dest_file"
+        echo -e "${GREEN}[OK] Deployed ${item} to ${dest_file}.${NC}"
     else
         echo -e "${RED}[ERR] Source configuration file missing: ${src_file}${NC}"
         exit 1
     fi
 done
 
-# 5. Remove or back up leftover monolithic ~/.config/hypr/hyprland.conf to prevent shadowing hyprland.lua
+trap - EXIT INT TERM
+
+# 4. Remove or back up leftover monolithic ~/.config/hypr/hyprland.conf to prevent shadowing hyprland.lua
 HYPR_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.conf"
 if [ -e "$HYPR_CONF" ] || [ -L "$HYPR_CONF" ]; then
     backup_conf="${HYPR_CONF}.backup_$(date +%Y%m%d_%H%M%S)"

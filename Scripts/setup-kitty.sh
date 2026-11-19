@@ -6,6 +6,13 @@
 
 set -euo pipefail
 
+# Reject root/sudo invocation
+if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+    echo -e "\033[0;31m[ERR] Please do not run this script as root or with sudo.\033[0m" >&2
+    echo -e "\033[0;33m[!] Run as your regular desktop user. Elevation (sudo) will be prompted automatically if packages need to be installed.\033[0m" >&2
+    exit 1
+fi
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -42,41 +49,35 @@ fi
 
 if [ ${#missing_pkgs[@]} -gt 0 ]; then
     echo -e "${YELLOW}[..] Installing missing packages via pacman: ${missing_pkgs[*]}...${NC}"
-    if [ "$EUID" -eq 0 ]; then
-        pacman -S --needed --noconfirm "${missing_pkgs[@]}"
-    elif command -v sudo &>/dev/null; then
+    if command -v sudo &>/dev/null; then
         sudo pacman -S --needed --noconfirm "${missing_pkgs[@]}"
     else
-        echo -e "${RED}[ERR] Root privileges or sudo required to install: ${missing_pkgs[*]}${NC}"
+        echo -e "${RED}[ERR] sudo required to install: ${missing_pkgs[*]}${NC}"
         exit 1
     fi
 fi
 
-# 2. Non-destructively back up existing ~/.config/kitty
-if [ -L "$TARGET_DIR" ] || { [ -d "$TARGET_DIR" ] && [ -n "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; }; then
-    backup_path="${TARGET_DIR}.backup_$(date +%Y%m%d_%H%M%S)"
-    count=1
-    while [ -e "$backup_path" ] || [ -L "$backup_path" ]; do
-        backup_path="${TARGET_DIR}.backup_$(date +%Y%m%d_%H%M%S)_${count}"
-        count=$((count + 1))
-    done
-    echo -e "${YELLOW}[..] Backing up existing Kitty configuration to: ${backup_path}${NC}"
-    if [ -L "$TARGET_DIR" ] && [ ! -e "$TARGET_DIR" ]; then
-        cp -P "$TARGET_DIR" "$backup_path"
+# 2. Non-destructively back up existing ~/.config/kitty via move
+if [ -e "$TARGET_DIR" ] || [ -L "$TARGET_DIR" ]; then
+    if [ -L "$TARGET_DIR" ] || [ -n "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
+        backup_path="${TARGET_DIR}.backup_$(date +%Y%m%d_%H%M%S)"
+        count=1
+        while [ -e "$backup_path" ] || [ -L "$backup_path" ]; do
+            backup_path="${TARGET_DIR}.backup_$(date +%Y%m%d_%H%M%S)_${count}"
+            count=$((count + 1))
+        done
+        echo -e "${YELLOW}[..] Backing up existing Kitty configuration to: ${backup_path}${NC}"
+        mv "$TARGET_DIR" "$backup_path"
     else
-        cp -r "$TARGET_DIR" "$backup_path"
+        rm -rf "$TARGET_DIR"
     fi
-fi
-
-if [ -L "$TARGET_DIR" ]; then
-    rm -f "$TARGET_DIR"
 fi
 
 mkdir -p "$TARGET_DIR"
 
-# 3. Deploy configs/kitty/. in-place
+# 3. Deploy configs/kitty/. into fresh directory
 echo -e "${CYAN}[..] Deploying Kitty configuration to ${TARGET_DIR}...${NC}"
-if cp -rf "$KITTY_SRC/." "$TARGET_DIR/"; then
+if cp -r "$KITTY_SRC/." "$TARGET_DIR/"; then
     chmod -R u+w "$TARGET_DIR" 2>/dev/null || true
     echo -e "${GREEN}[OK] Kitty configuration deployed successfully to ${TARGET_DIR}.${NC}"
 else

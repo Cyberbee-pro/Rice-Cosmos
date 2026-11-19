@@ -6,6 +6,13 @@
 
 set -euo pipefail
 
+# Reject root/sudo invocation
+if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+    echo -e "\033[0;31m[ERR] Please do not run this script as root or with sudo.\033[0m" >&2
+    echo -e "\033[0;33m[!] Run as your regular desktop user. Elevation (sudo) will be prompted automatically if packages need to be installed.\033[0m" >&2
+    exit 1
+fi
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -26,12 +33,10 @@ echo -e "${CYAN}[..] Configuring Standalone Zsh Environment . . . .${NC}"
 # 1. Ensure zsh is installed via pacman
 if ! command -v zsh &>/dev/null; then
     echo -e "${YELLOW}[..] zsh is missing. Installing via pacman...${NC}"
-    if [ "$EUID" -eq 0 ]; then
-        pacman -S --needed --noconfirm zsh
-    elif command -v sudo &>/dev/null; then
+    if command -v sudo &>/dev/null; then
         sudo pacman -S --needed --noconfirm zsh
     else
-        echo -e "${RED}[ERR] Root privileges or sudo required to install zsh.${NC}"
+        echo -e "${RED}[ERR] sudo required to install zsh.${NC}"
         exit 1
     fi
 fi
@@ -78,8 +83,32 @@ for script_file in "$COSMOS_SCRIPTS_DEST"/*; do
     fi
 done
 
-# 4. Non-destructively back up ~/.zshrc
+# 4. Strict marker order validation for ~/.zshrc
 ZSHRC="$HOME/.zshrc"
+start_count=0
+end_count=0
+start_line=0
+end_line=0
+
+if [ -f "$ZSHRC" ] || [ -L "$ZSHRC" ]; then
+    read -r start_count end_count start_line end_line < <(awk '
+        /COSMOS_FASTFETCH_BANNER_START/ { start_count++; if (start_line == 0) start_line = NR }
+        /COSMOS_FASTFETCH_BANNER_END/   { end_count++; if (end_line == 0) end_line = NR }
+        END { printf "%d %d %d %d\n", start_count, end_count, start_line, end_line }
+    ' "$ZSHRC")
+fi
+
+if [ "$start_count" -eq 0 ] && [ "$end_count" -eq 0 ]; then
+    : # Brand new injection, valid
+elif [ "$start_count" -eq 1 ] && [ "$end_count" -eq 1 ] && [ "$start_line" -lt "$end_line" ]; then
+    : # Existing valid block to replace
+else
+    echo -e "${RED}[ERR] Malformed Cosmos banner markers in ${ZSHRC} (start_count=${start_count}, end_count=${end_count}, start_line=${start_line}, end_line=${end_line}).${NC}" >&2
+    echo -e "${RED}[ERR] Aborting modification to prevent config corruption. Please manually fix or remove the markers in ${ZSHRC}.${NC}" >&2
+    exit 1
+fi
+
+# 5. Non-destructively back up ~/.zshrc
 if [ -L "$ZSHRC" ]; then
     backup_path="${ZSHRC}.backup_$(date +%Y%m%d_%H%M%S)"
     count=1
@@ -110,7 +139,7 @@ else
 fi
 chmod u+w "$ZSHRC" 2>/dev/null || true
 
-# 5. Idempotently inject Cosmos banner, Starship prompt init, and aliases into ~/.zshrc
+# 6. Idempotently inject Cosmos banner, Starship prompt init, and aliases into ~/.zshrc
 INJECTION_SNIPPET=$(cat << EOF
 # >>> COSMOS_FASTFETCH_BANNER_START >>>
 if [[ \$- == *i* ]]; then
@@ -142,25 +171,11 @@ ${SCRIPT_ALIASES}fi
 EOF
 )
 
-has_start=0
-has_end=0
-if grep -q "COSMOS_FASTFETCH_BANNER_START" "$ZSHRC"; then
-    has_start=1
-fi
-if grep -q "COSMOS_FASTFETCH_BANNER_END" "$ZSHRC"; then
-    has_end=1
-fi
-
-if [ "$has_start" -eq 1 ] && [ "$has_end" -eq 0 ]; then
-    echo -e "${RED}[ERR] Malformed Cosmos banner block in ${ZSHRC}. Skipping modification to avoid config corruption.${NC}"
-    exit 0
-fi
-
-if [ "$has_start" -eq 1 ] && [ "$has_end" -eq 1 ]; then
+if [ "$start_count" -eq 1 ] && [ "$end_count" -eq 1 ]; then
     echo -e "${YELLOW}[..] Updating existing Cosmos banner & aliases in ${ZSHRC}...${NC}"
-    sed -i '/# >>> COSMOS_FASTFETCH_BANNER_START >>>/,/# <<< COSMOS_FASTFETCH_BANNER_END <<</d' "$ZSHRC"
-elif [ "$has_start" -eq 0 ] && [ "$has_end" -eq 1 ]; then
-    sed -i '/# <<< COSMOS_FASTFETCH_BANNER_END <<</d' "$ZSHRC"
+    sed -i "${start_line},${end_line}d" "$ZSHRC"
+else
+    echo -e "${CYAN}[..] Adding Cosmos banner & aliases to ${ZSHRC}...${NC}"
 fi
 
 sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$ZSHRC" 2>/dev/null || true

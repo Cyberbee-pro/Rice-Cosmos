@@ -6,6 +6,13 @@
 
 set -euo pipefail
 
+# Reject root/sudo invocation
+if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+    echo -e "\033[0;31m[ERR] Please do not run this script as root or with sudo.\033[0m" >&2
+    echo -e "\033[0;33m[!] Run as your regular desktop user so binaries are deployed to your user environment (~/.local/bin).\033[0m" >&2
+    exit 1
+fi
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -14,14 +21,17 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -d "$SCRIPT_DIR/bin" ]; then
-    REPO_ROOT="$SCRIPT_DIR"
+    BIN_SRC="$SCRIPT_DIR/bin"
+elif [ -d "$SCRIPT_DIR/Scripts/bin" ]; then
+    BIN_SRC="$SCRIPT_DIR/Scripts/bin"
 elif [ -d "$SCRIPT_DIR/../Scripts/bin" ]; then
-    REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+    BIN_SRC="$(cd "$SCRIPT_DIR/../Scripts/bin" && pwd)"
+elif [ -d "$SCRIPT_DIR/../bin" ]; then
+    BIN_SRC="$(cd "$SCRIPT_DIR/../bin" && pwd)"
 else
-    REPO_ROOT="$SCRIPT_DIR"
+    BIN_SRC="$SCRIPT_DIR/bin"
 fi
 
-BIN_SRC="${REPO_ROOT}/Scripts/bin"
 TARGET_DIR="${HOME}/.local/bin"
 
 echo -e "${CYAN}[..] Deploying Helper Binaries to ${TARGET_DIR} . . . .${NC}"

@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+    echo -e "\033[0;31m[ERR] Please do not run this script as root or with sudo.\033[0m" >&2
+    echo -e "\033[0;33m[!] Run as your regular desktop user. Elevation (sudo) will be prompted automatically if packages need to be installed.\033[0m" >&2
+    printf '\033[0;31m[ERR] %s\033[0m\n' "You almost boght doom and dispair baka! dont use sudo" >&2
+    exit 1
+fi
+
+
 # ==============================================================================
 #  COSMOS RICE : Master Orchestrator (Pure Arch Linux)
 # ==============================================================================
